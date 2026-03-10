@@ -321,7 +321,7 @@ Resources:
       Runtime: nodejs18.x
       Timeout: 30
       MemorySize: 256
-      Handler: handlers/dashboard.handler
+      Handler: handlers/dashboard.handler.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
         S3Bucket: !Sub '${AWS::AccountId}-${DeploymentsBucketSuffix}-eis-deployments'
@@ -340,7 +340,7 @@ Resources:
       Runtime: nodejs18.x
       Timeout: 30
       MemorySize: 256
-      Handler: handlers/kpis.handler
+      Handler: handlers/kpis.handler.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
         S3Bucket: !Sub '${AWS::AccountId}-${DeploymentsBucketSuffix}-eis-deployments'

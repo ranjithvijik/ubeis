@@ -1,0 +1,58 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs (we rebuild in container)
+dist
+**/dist
+
+# Frontend (backend-only image)
+frontend
+
+# Lambda packages (not needed for server)
+dist/lambdas
+*.zip
+
+# Git and IDE
+.git
+.gitignore
+.cursor
+.vscode
+*.swp
+*.swo
+.DS_Store
+
+# Docs and misc (not needed at runtime)
+*.md
+*.docx
+code.txt
+coverage
+.nyc_output
+*.log
+npm-debug.log*
+
+# Tests (not needed in image)
+**/*.test.ts
+**/*.spec.ts
+**/__tests__
+**/jest.config*
+**/vitest.config*
+e2e
+playwright.config*
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+
+# Scripts not needed in container
+scripts/seed-data.ts
+scripts/create-admin-user.ts
+scripts/package-lambdas.js
+scripts/deploy*.sh
+
+# Infrastructure (deploy separately)
+infrastructure
+
+# GitHub
+.github

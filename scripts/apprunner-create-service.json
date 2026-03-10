@@ -1,0 +1,37 @@
+{
+  "ServiceName": "ubeis-backend-dev",
+  "SourceConfiguration": {
+    "AuthenticationConfiguration": {
+      "AccessRoleArn": "arn:aws:iam::535002849180:role/ubeis-apprunner-ecr-access"
+    },
+    "ImageRepository": {
+      "ImageIdentifier": "535002849180.dkr.ecr.us-east-1.amazonaws.com/ubeis-backend-dev:latest",
+      "ImageRepositoryType": "ECR",
+      "ImageConfiguration": {
+        "Port": "3000",
+        "RuntimeEnvironmentVariables": {
+          "DYNAMODB_TABLE": "UniversityOfBaltimore-EIS-Data-dev",
+          "SNS_ALERTS_TOPIC": "arn:aws:sns:us-east-1:535002849180:UniversityOfBaltimore-EIS-Alerts-dev",
+          "AWS_REGION": "us-east-1",
+          "ENVIRONMENT": "dev",
+          "LOG_LEVEL": "INFO",
+          "NODE_ENV": "production"
+        }
+      }
+    },
+    "AutoDeploymentsEnabled": false
+  },
+  "InstanceConfiguration": {
+    "Cpu": "1024",
+    "Memory": "2048",
+    "InstanceRoleArn": "arn:aws:iam::535002849180:role/ubeis-apprunner-instance-role"
+  },
+  "HealthCheckConfiguration": {
+    "Protocol": "HTTP",
+    "Path": "/health",
+    "Interval": 10,
+    "Timeout": 5,
+    "HealthyThreshold": 1,
+    "UnhealthyThreshold": 5
+  }
+}
