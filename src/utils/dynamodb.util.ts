@@ -5,10 +5,6 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
     DynamoDBDocumentClient,
-    GetCommand,
-    PutCommand,
-    UpdateCommand,
-    DeleteCommand,
     QueryCommand,
     QueryCommandInput,
 } from '@aws-sdk/lib-dynamodb';
@@ -87,5 +83,3 @@ export const decodeNextToken = (token?: string): Record<string, unknown> | undef
         return undefined;
     }
 };
-
-5. MIDDLEWARE

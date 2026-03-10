@@ -7,7 +7,6 @@ import {
     PutCommand,
     UpdateCommand,
     DeleteCommand,
-    QueryCommand,
     QueryCommandInput,
 } from '@aws-sdk/lib-dynamodb';
 import { docClient, TABLE_NAME, queryItems, decodeNextToken } from '../utils/dynamodb.util';

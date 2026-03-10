@@ -30,7 +30,7 @@ export class KPIRepository extends BaseRepository<KPI> {
 
         if (!item) return null;
 
-        return this.mapToKPI(item);
+        return this.mapToKPI(item as unknown as Record<string, unknown>);
     }
 
     async getByCategory(
@@ -49,7 +49,7 @@ export class KPIRepository extends BaseRepository<KPI> {
         );
 
         return {
-            items: result.items.map(this.mapToKPI),
+            items: (result.items as unknown as Record<string, unknown>[]).map((i) => this.mapToKPI(i)),
             nextToken: result.nextToken,
         };
     }
@@ -141,7 +141,7 @@ export class KPIRepository extends BaseRepository<KPI> {
 
         this.logger.info('KPI updated', { kpiId });
 
-        return this.mapToKPI(updated);
+        return this.mapToKPI(updated as unknown as Record<string, unknown>);
     }
 
     async updateValue(
@@ -186,7 +186,7 @@ export class KPIRepository extends BaseRepository<KPI> {
 
         this.logger.info('KPI value updated', { kpiId, newValue, status });
 
-        return this.mapToKPI(updated);
+        return this.mapToKPI(updated as unknown as Record<string, unknown>);
     }
 
     async delete(kpiId: string): Promise<void> {
@@ -211,8 +211,9 @@ export class KPIRepository extends BaseRepository<KPI> {
             { ...options, sortOrder: 'desc' }
         );
 
+        const items = result.items as unknown as Record<string, unknown>[];
         return {
-            items: result.items.map((item: Record<string, unknown>) => ({
+            items: items.map((item) => ({
                 date: item.date as string,
                 value: item.value as number,
                 recordedAt: item.recordedAt as string,

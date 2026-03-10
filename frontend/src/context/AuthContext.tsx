@@ -33,6 +33,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             try {
                 attributes = await fetchUserAttributes();
             } catch (attrError) {
+                // Intentional: log attribute fetch failure without destroying session
+                // eslint-disable-next-line no-console
                 console.warn(
                     'Failed to fetch user attributes, continuing with basic auth state',
                     attrError

@@ -26,7 +26,7 @@ export class AlertRepository extends BaseRepository<Alert> {
 
         if (!item) return null;
 
-        return this.mapToAlert(item);
+        return this.mapToAlert(item as unknown as Record<string, unknown>);
     }
 
     async getActiveAlerts(
@@ -57,7 +57,7 @@ export class AlertRepository extends BaseRepository<Alert> {
         );
 
         return {
-            items: result.items.map(this.mapToAlert),
+            items: (result.items as unknown as Record<string, unknown>[]).map((i) => this.mapToAlert(i)),
             nextToken: result.nextToken,
         };
     }
@@ -78,7 +78,7 @@ export class AlertRepository extends BaseRepository<Alert> {
         );
 
         return {
-            items: result.items.map(this.mapToAlert),
+            items: (result.items as unknown as Record<string, unknown>[]).map((i) => this.mapToAlert(i)),
             nextToken: result.nextToken,
         };
     }
@@ -134,7 +134,7 @@ export class AlertRepository extends BaseRepository<Alert> {
 
         this.logger.info('Alert acknowledged', { alertId, userId });
 
-        return this.mapToAlert(updated);
+        return this.mapToAlert(updated as unknown as Record<string, unknown>);
     }
 
     async resolve(alertId: string): Promise<Alert> {
@@ -152,7 +152,7 @@ export class AlertRepository extends BaseRepository<Alert> {
 
         this.logger.info('Alert resolved', { alertId });
 
-        return this.mapToAlert(updated);
+        return this.mapToAlert(updated as unknown as Record<string, unknown>);
     }
 
     async delete(alertId: string): Promise<void> {

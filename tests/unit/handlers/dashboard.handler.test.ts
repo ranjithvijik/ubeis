@@ -70,5 +70,3 @@ describe('Dashboard Handler', () => {
     expect(response.statusCode).toBe(401);
   });
 });
-
-11. SCRIPTS

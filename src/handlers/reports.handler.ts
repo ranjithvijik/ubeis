@@ -53,7 +53,10 @@ export const handler = async (
 
                 // GET /reports - List user's reports
                 const queryParams = event.queryStringParameters || {};
-                const pagination = validate(paginationSchema, queryParams);
+                const pagination = validate(paginationSchema, queryParams) as {
+                    limit: number;
+                    nextToken?: string;
+                };
 
                 return ResponseUtil.success(
                     {
@@ -67,9 +70,16 @@ export const handler = async (
             }
 
             case 'POST': {
-                // POST /reports/generate
+                // POST /reports/generate - restrict to roles that can generate reports
+                AuthMiddleware.requireRole(userContext, ['admin', 'president', 'provost', 'cfo']);
                 const body = JSON.parse(event.body || '{}');
-                const generateRequest = validate(generateReportSchema, body);
+                const generateRequest = validate(generateReportSchema, body) as {
+                    type: string;
+                    title: string;
+                    format: string;
+                    description?: string;
+                    parameters?: Record<string, unknown>;
+                };
 
                 logger.info('Generating report', {
                     type: generateRequest.type,
@@ -101,5 +111,3 @@ export const handler = async (
         return handleError(error as Error, requestId);
     }
 };
-
-9. INFRASTRUCTURE(CloudFormation)

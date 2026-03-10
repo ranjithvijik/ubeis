@@ -26,6 +26,7 @@ class ApiService {
                         config.headers.Authorization = `Bearer ${token}`;
                     }
                 } catch (error) {
+                    // eslint-disable-next-line no-console -- intentional: token fetch failure
                     console.warn('Failed to get auth token:', error);
                 }
 

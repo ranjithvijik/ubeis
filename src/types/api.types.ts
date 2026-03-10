@@ -19,5 +19,3 @@ export interface HandlerConfig {
     allowedRoles?: string[];
     rateLimit?: number;
 }
-
-3. CONSTANTS

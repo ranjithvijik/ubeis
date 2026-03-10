@@ -1,182 +1,169 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS:: Serverless - 2016 - 10 - 31
 Description: University of Baltimore EIS MVP - Main Stack
 
 Parameters:
-Environment:
-Type: String
-Default: dev
-AllowedValues:
-- dev
-    - staging
-    - prod
-UniversityName:
-Type: String
-Default: UniversityOfBaltimore
-
-Globals:
-Function:
-Timeout: 30
-Runtime: nodejs18.x
-MemorySize: 256
-Environment:
-Variables:
-ENVIRONMENT: !Ref Environment
-DYNAMODB_TABLE: !Ref EISDataTable
-SNS_ALERTS_TOPIC: !Ref AlertsTopic
-LOG_LEVEL: !If[IsProd, 'INFO', 'DEBUG']
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+  UniversityName:
+    Type: String
+    Default: UniversityOfBaltimore
 
 Conditions:
-IsProd: !Equals[!Ref Environment, 'prod']
+  IsProd: !Equals [!Ref Environment, 'prod']
 
 Resources:
   # Cognito User Pool
-UserPool:
-Type: AWS:: Cognito:: UserPool
-Properties:
-UserPoolName: !Sub ${ UniversityName } -EIS - ${ Environment }
-AutoVerifiedAttributes:
-- email
-UsernameAttributes:
-- email
-Policies:
-PasswordPolicy:
-MinimumLength: 12
-RequireLowercase: true
-RequireNumbers: true
-RequireSymbols: true
-RequireUppercase: true
-Schema:
-- Name: role
-AttributeDataType: String
-Mutable: true
-    - Name: department
-AttributeDataType: String
-Mutable: true
-    - Name: college
-AttributeDataType: String
-Mutable: true
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub '${UniversityName}-EIS-${Environment}'
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+      Schema:
+        - Name: role
+          AttributeDataType: String
+          Mutable: true
+        - Name: department
+          AttributeDataType: String
+          Mutable: true
+        - Name: college
+          AttributeDataType: String
+          Mutable: true
 
-UserPoolClient:
-Type: AWS:: Cognito:: UserPoolClient
-Properties:
-ClientName: !Sub ${ UniversityName } -EIS - Client - ${ Environment }
-UserPoolId: !Ref UserPool
-GenerateSecret: false
-ExplicitAuthFlows:
-- ALLOW_USER_PASSWORD_AUTH
-    - ALLOW_REFRESH_TOKEN_AUTH
-    - ALLOW_USER_SRP_AUTH
- 
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub '${UniversityName}-EIS-Client-${Environment}'
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+
   # DynamoDB Table
-EISDataTable:
-Type: AWS:: DynamoDB:: Table
-Properties:
-TableName: !Sub ${ UniversityName } -EIS - Data - ${ Environment }
-BillingMode: PAY_PER_REQUEST
-AttributeDefinitions:
-- AttributeName: PK
-AttributeType: S
-    - AttributeName: SK
-AttributeType: S
-    - AttributeName: GSI1PK
-AttributeType: S
-    - AttributeName: GSI1SK
-AttributeType: S
-    - AttributeName: GSI2PK
-AttributeType: S
-    - AttributeName: GSI2SK
-AttributeType: S
-KeySchema:
-- AttributeName: PK
-KeyType: HASH
-    - AttributeName: SK
-KeyType: RANGE
-GlobalSecondaryIndexes:
-- IndexName: GSI1
-KeySchema:
-- AttributeName: GSI1PK
-KeyType: HASH
-    - AttributeName: GSI1SK
-KeyType: RANGE
-Projection:
-ProjectionType: ALL
-    - IndexName: GSI2
-KeySchema:
-- AttributeName: GSI2PK
-KeyType: HASH
-    - AttributeName: GSI2SK
-KeyType: RANGE
-Projection:
-ProjectionType: ALL
-StreamSpecification:
-StreamViewType: NEW_AND_OLD_IMAGES
-TimeToLiveSpecification:
-AttributeName: TTL
-Enabled: true
- 
+  EISDataTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${UniversityName}-EIS-Data-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+        - AttributeName: GSI2PK
+          AttributeType: S
+        - AttributeName: GSI2SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: GSI2
+          KeySchema:
+            - AttributeName: GSI2PK
+              KeyType: HASH
+            - AttributeName: GSI2SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      TimeToLiveSpecification:
+        AttributeName: TTL
+        Enabled: true
+
   # S3 Bucket for Reports
   ReportsBucket:
-    Type: AWS:: S3:: Bucket
-Properties:
-BucketName: !Sub ${ AWS:: AccountId } -${ UniversityName } -eis - reports - ${ Environment }
-BucketEncryption:
-ServerSideEncryptionConfiguration:
-- ServerSideEncryptionByDefault:
-SSEAlgorithm: AES256
-PublicAccessBlockConfiguration:
-BlockPublicAcls: true
-BlockPublicPolicy: true
-IgnorePublicAcls: true
-RestrictPublicBuckets: true
- 
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::AccountId}-${UniversityName}-eis-reports-${Environment}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
   # SNS Topic for Alerts
   AlertsTopic:
-    Type: AWS:: SNS:: Topic
-Properties:
-TopicName: !Sub ${ UniversityName } -EIS - Alerts - ${ Environment }
-DisplayName: EIS Executive Alerts
- 
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${UniversityName}-EIS-Alerts-${Environment}'
+      DisplayName: EIS Executive Alerts
+
   # Lambda Execution Role
-LambdaExecutionRole:
-Type: AWS:: IAM:: Role
-Properties:
-RoleName: !Sub ${ UniversityName } -EIS - Lambda - ${ Environment }
-AssumeRolePolicyDocument:
-Version: '2012-10-17'
-Statement:
-- Effect: Allow
-Principal:
-Service: lambda.amazonaws.com
-Action: sts: AssumeRole
-ManagedPolicyArns:
-- arn: aws: iam:: aws: policy / service - role / AWSLambdaBasicExecutionRole
-Policies:
-- PolicyName: DynamoDBAccess
-PolicyDocument:
-Version: '2012-10-17'
-Statement:
-- Effect: Allow
-Action:
-- dynamodb: GetItem
-    - dynamodb: PutItem
-        - dynamodb: UpdateItem
-            - dynamodb: DeleteItem
-                - dynamodb: Query
-                    - dynamodb: Scan
-Resource:
-- !GetAtt EISDataTable.Arn
-    - !Sub ${ EISDataTable.Arn } /index/ *
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${UniversityName}-EIS-Lambda-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource:
+                  - !GetAtt EISDataTable.Arn
+                  - !Sub '${EISDataTable.Arn}/index/*'
         - PolicyName: S3Access
-PolicyDocument:
-Version: '2012-10-17'
-Statement:
-- Effect: Allow
-Action:
-- s3: GetObject
-    - s3: PutObject
-        - s3: DeleteObject
-Resource: !Sub ${ ReportsBucket.Arn }/*
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub '${ReportsBucket.Arn}/*'
         - PolicyName: SNSAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -185,14 +172,14 @@ Resource: !Sub ${ ReportsBucket.Arn }/*
                 Action:
                   - sns:Publish
                 Resource: !Ref AlertsTopic
- 
+
   # API Gateway
   EISApi:
     Type: AWS::ApiGateway::RestApi
     Properties:
-      Name: !Sub ${UniversityName}-EIS-API-${Environment}
+      Name: !Sub '${UniversityName}-EIS-API-${Environment}'
       Description: EIS REST API
- 
+
   ApiAuthorizer:
     Type: AWS::ApiGateway::Authorizer
     Properties:
@@ -202,49 +189,85 @@ Resource: !Sub ${ ReportsBucket.Arn }/*
       IdentitySource: method.request.header.Authorization
       ProviderARNs:
         - !GetAtt UserPool.Arn
- 
-  # Lambda Functions
+
+  # Lambda Functions (Code must be uploaded to S3 before deploy - see DEPLOYMENT_README.md)
   DashboardFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub ${UniversityName}-EIS-Dashboard-${Environment}
+      FunctionName: !Sub '${UniversityName}-EIS-Dashboard-${Environment}'
+      Runtime: nodejs18.x
+      Timeout: 30
+      MemorySize: 256
       Handler: handlers/dashboard.handler.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
-        S3Bucket: !Sub ${AWS::AccountId}-${UniversityName}-eis-deployments
+        S3Bucket: !Sub '${AWS::AccountId}-${UniversityName}-eis-deployments'
         S3Key: lambdas/dashboard.zip
- 
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          DYNAMODB_TABLE: !Ref EISDataTable
+          SNS_ALERTS_TOPIC: !Ref AlertsTopic
+          LOG_LEVEL: !If [IsProd, 'INFO', 'DEBUG']
+
   KPIsFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub ${UniversityName}-EIS-KPIs-${Environment}
+      FunctionName: !Sub '${UniversityName}-EIS-KPIs-${Environment}'
+      Runtime: nodejs18.x
+      Timeout: 30
+      MemorySize: 256
       Handler: handlers/kpis.handler.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
-        S3Bucket: !Sub ${AWS::AccountId}-${UniversityName}-eis-deployments
+        S3Bucket: !Sub '${AWS::AccountId}-${UniversityName}-eis-deployments'
         S3Key: lambdas/kpis.zip
- 
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          DYNAMODB_TABLE: !Ref EISDataTable
+          SNS_ALERTS_TOPIC: !Ref AlertsTopic
+          LOG_LEVEL: !If [IsProd, 'INFO', 'DEBUG']
+
   AlertsFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub ${UniversityName}-EIS-Alerts-${Environment}
+      FunctionName: !Sub '${UniversityName}-EIS-Alerts-${Environment}'
+      Runtime: nodejs18.x
+      Timeout: 30
+      MemorySize: 256
       Handler: handlers/alerts.handler.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
-        S3Bucket: !Sub ${AWS::AccountId}-${UniversityName}-eis-deployments
+        S3Bucket: !Sub '${AWS::AccountId}-${UniversityName}-eis-deployments'
         S3Key: lambdas/alerts.zip
- 
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          DYNAMODB_TABLE: !Ref EISDataTable
+          SNS_ALERTS_TOPIC: !Ref AlertsTopic
+          LOG_LEVEL: !If [IsProd, 'INFO', 'DEBUG']
+
   AlertProcessorFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub ${UniversityName}-EIS-AlertProcessor-${Environment}
+      FunctionName: !Sub '${UniversityName}-EIS-AlertProcessor-${Environment}'
+      Runtime: nodejs18.x
+      Timeout: 60
+      MemorySize: 256
       Handler: handlers/alert-processor.handler.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
-        S3Bucket: !Sub ${AWS::AccountId}-${UniversityName}-eis-deployments
+        S3Bucket: !Sub '${AWS::AccountId}-${UniversityName}-eis-deployments'
         S3Key: lambdas/alert-processor.zip
- 
-  # DynamoDB Stream Trigger
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          DYNAMODB_TABLE: !Ref EISDataTable
+          SNS_ALERTS_TOPIC: !Ref AlertsTopic
+          LOG_LEVEL: !If [IsProd, 'INFO', 'DEBUG']
+
+  # DynamoDB Stream Trigger for Alert Processor
   AlertProcessorEventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
     Properties:
@@ -252,23 +275,22 @@ Resource: !Sub ${ ReportsBucket.Arn }/*
       FunctionName: !Ref AlertProcessorFunction
       StartingPosition: LATEST
       BatchSize: 10
- 
+
 Outputs:
   ApiEndpoint:
-    Value: !Sub https://${EISApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+    Description: API Gateway endpoint URL (add /dev or /prod after first deployment)
+    Value: !Sub 'https://${EISApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
     Export:
-      Name: !Sub ${UniversityName}-EIS-ApiEndpoint-${Environment}
+      Name: !Sub '${UniversityName}-EIS-ApiEndpoint-${Environment}'
   UserPoolId:
     Value: !Ref UserPool
     Export:
-      Name: !Sub ${UniversityName}-EIS-UserPoolId-${Environment}
+      Name: !Sub '${UniversityName}-EIS-UserPoolId-${Environment}'
   UserPoolClientId:
     Value: !Ref UserPoolClient
     Export:
-      Name: !Sub ${UniversityName}-EIS-UserPoolClientId-${Environment}
+      Name: !Sub '${UniversityName}-EIS-UserPoolClientId-${Environment}'
   TableName:
     Value: !Ref EISDataTable
     Export:
-      Name: !Sub ${UniversityName}-EIS-TableName-${Environment}
-
-10. TESTS
+      Name: !Sub '${UniversityName}-EIS-TableName-${Environment}'

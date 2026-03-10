@@ -54,7 +54,19 @@ export const TrendChart: React.FC<TrendChartProps> = ({
         return value.toString();
     };
 
-    const CustomTooltip = ({ active, payload, label }: any) => {
+    interface TooltipPayloadItem {
+        value: number;
+        [key: string]: unknown;
+    }
+    const CustomTooltip = ({
+        active,
+        payload,
+        label,
+    }: {
+        active?: boolean;
+        payload?: TooltipPayloadItem[];
+        label?: string;
+    }) => {
         if (active && payload && payload.length) {
             return (
                 <div className= "bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700" >

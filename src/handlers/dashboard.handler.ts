@@ -33,14 +33,14 @@ export const handler = async (
         // Validate query parameters
         const queryParams = validate(dashboardQuerySchema, event.queryStringParameters || {});
 
-        // Build request
+        // Build request (schema defaults ensure period/category are set)
         const request: DashboardRequest = {
             userId: userContext.userId,
             role: userContext.role,
             department: userContext.department,
             college: userContext.college,
-            period: queryParams.period,
-            category: queryParams.category === 'all' ? undefined : queryParams.category,
+            period: queryParams.period ?? 'monthly',
+            category: queryParams.category === 'all' ? undefined : (queryParams.category as DashboardRequest['category']),
         };
 
         // Fetch dashboard data

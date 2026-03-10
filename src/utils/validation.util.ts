@@ -76,7 +76,7 @@ export const kpiDetailQuerySchema = z.object({
 
 export const dashboardQuerySchema = z.object({
     period: z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly']).default('monthly'),
-    category: z.enum([...KPI_CATEGORIES, 'all'] as [string, ...string[]]).default('all'),
+    category: z.enum([...KPI_CATEGORIES, 'all'] as unknown as [string, ...string[]]).default('all'),
 });
 
 // Validation Helper
