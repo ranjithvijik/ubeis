@@ -1,0 +1,53 @@
+{
+    "name": "uob-eis-mvp",
+        "version": "1.0.0",
+            "description": "Executive Information System for University of Baltimore",
+                "main": "dist/index.js",
+                    "scripts": {
+        "build": "tsc",
+            "watch": "tsc -w",
+                "test": "jest",
+                    "test:coverage": "jest --coverage",
+                        "test:integration": "jest --config jest.integration.config.js",
+                            "lint": "eslint src/**/*.ts",
+                                "lint:fix": "eslint src/**/*.ts --fix",
+                                    "format": "prettier --write src/**/*.ts",
+                                        "package": "npm run build && node scripts/package-lambdas.js",
+                                            "deploy:dev": "npm run package && aws cloudformation deploy --template-file infrastructure/main.yaml --stack-name eis-dev --parameter-overrides Environment=dev --capabilities CAPABILITY_NAMED_IAM",
+                                                "deploy:staging": "npm run package && aws cloudformation deploy --template-file infrastructure/main.yaml --stack-name eis-staging --parameter-overrides Environment=staging --capabilities CAPABILITY_NAMED_IAM",
+                                                    "deploy:prod": "npm run package && aws cloudformation deploy --template-file infrastructure/main.yaml --stack-name eis-prod --parameter-overrides Environment=prod --capabilities CAPABILITY_NAMED_IAM",
+                                                        "seed-data": "ts-node scripts/seed-data.ts",
+                                                            "create-admin": "ts-node scripts/create-admin-user.ts"
+    },
+    "dependencies": {
+        "@aws-sdk/client-dynamodb": "^3.525.0",
+            "@aws-sdk/client-s3": "^3.525.0",
+                "@aws-sdk/client-sns": "^3.525.0",
+                    "@aws-sdk/client-cognito-identity-provider": "^3.525.0",
+                        "@aws-sdk/lib-dynamodb": "^3.525.0",
+                            "@aws-lambda-powertools/logger": "^1.18.0",
+                                "@aws-lambda-powertools/tracer": "^1.18.0",
+                                    "@aws-lambda-powertools/metrics": "^1.18.0",
+                                        "uuid": "^9.0.0",
+                                            "zod": "^3.22.0"
+    },
+    "devDependencies": {
+        "@types/aws-lambda": "^8.10.134",
+            "@types/jest": "^29.5.12",
+                "@types/node": "^20.11.0",
+                    "@types/uuid": "^9.0.8",
+                        "@typescript-eslint/eslint-plugin": "^7.0.0",
+                            "@typescript-eslint/parser": "^7.0.0",
+                                "esbuild": "^0.20.0",
+                                    "eslint": "^8.56.0",
+                                        "eslint-config-prettier": "^9.1.0",
+                                            "jest": "^29.7.0",
+                                                "prettier": "^3.2.0",
+                                                    "ts-jest": "^29.1.2",
+                                                        "ts-node": "^10.9.2",
+                                                            "typescript": "^5.3.3"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
