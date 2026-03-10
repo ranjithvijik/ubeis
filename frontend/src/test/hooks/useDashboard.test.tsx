@@ -3,6 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useDashboard } from '../../hooks/useDashboard';
 import { dashboardService } from '../../services/dashboard.service';
+import type { DashboardFilters } from '../../types';
 
 vi.mock('../../services/dashboard.service');
 
@@ -73,25 +74,23 @@ describe('useDashboard', () => {
     it('refetches when filters change', async () => {
         vi.mocked(dashboardService.getDashboard).mockResolvedValue(mockDashboardData);
 
+        const initialFilters: DashboardFilters = { period: 'monthly', category: 'all' };
+        const updatedFilters: DashboardFilters = { period: 'weekly', category: 'enrollment' };
+
         const { result, rerender } = renderHook(
             ({ filters }) => useDashboard(filters),
             {
                 wrapper: createWrapper(),
-                initialProps: { filters: { period: 'monthly' as const, category: 'all' as const } },
+                initialProps: { filters: initialFilters },
             }
         );
 
         await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-        rerender({ filters: { period: 'weekly' as const, category: 'enrollment' as const } });
+        rerender({ filters: updatedFilters });
 
         await waitFor(() => {
-            expect(dashboardService.getDashboard).toHaveBeenCalledWith({
-                period: 'weekly',
-                category: 'enrollment',
-            });
+            expect(dashboardService.getDashboard).toHaveBeenCalledWith(updatedFilters);
         });
     });
 });
-
-12. AUTOMATED TEST SCRIPTS - E2E TESTS(PLAYWRIGHT)

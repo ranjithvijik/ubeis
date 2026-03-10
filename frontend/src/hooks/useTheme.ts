@@ -10,5 +10,3 @@ export const useTheme = (): ThemeContextType => {
 
     return context;
 };
-
-7. REACT SERVICES

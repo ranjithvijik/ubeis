@@ -51,5 +51,3 @@ className = "flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text
             </div>
   );
 };
-
-6. REACT HOOKS

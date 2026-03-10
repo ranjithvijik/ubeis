@@ -15,7 +15,7 @@ import {
     kpiDetailQuerySchema,
 } from '../utils/validation.util';
 import { Logger } from '../utils/logger.util';
-import { KPICategory } from '../types';
+import { KPICategory, CreateKPIRequest } from '../types';
 
 const kpiService = new KPIService();
 const logger = new Logger('KPIsHandler');
@@ -40,7 +40,7 @@ export const handler = async (
                 if (kpiId) {
                     // GET /kpis/{kpiId} - optional includeHistory, historyLimit per API doc
                     const queryParams = event.queryStringParameters || {};
-                    const opts = validate(kpiDetailQuerySchema, queryParams);
+                    const opts = validate(kpiDetailQuerySchema as import('zod').ZodType<{ includeHistory?: boolean; historyLimit?: number }>, queryParams);
                     const kpi = await kpiService.getKPIById(kpiId, {
                         includeHistory: opts.includeHistory,
                         historyLimit: opts.historyLimit,
@@ -62,7 +62,7 @@ export const handler = async (
                 AuthMiddleware.requireRole(userContext, ['admin']);
 
                 const body = JSON.parse(event.body || '{}');
-                const createRequest = validate(createKPISchema, body);
+                const createRequest = validate(createKPISchema, body) as CreateKPIRequest;
 
                 const kpi = await kpiService.createKPI(createRequest, userContext.userId);
                 return ResponseUtil.created(kpi, requestId);

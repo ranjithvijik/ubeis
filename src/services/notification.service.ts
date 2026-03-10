@@ -92,5 +92,3 @@ University of Baltimore Executive Information System
     `.trim();
     }
 }
-
-8. LAMBDA HANDLERS

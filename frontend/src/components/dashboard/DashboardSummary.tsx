@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
     TrendingUp,
-    TrendingDown,
     AlertTriangle,
     CheckCircle,
     XCircle,
@@ -20,7 +19,14 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
     summary,
     isLoading = false,
 }) => {
-    const cards = [
+    const cards: Array<{
+        title: string;
+        value: number;
+        icon: typeof TrendingUp;
+        color: 'blue' | 'green' | 'purple' | 'red' | 'yellow';
+        description: string;
+        percentage?: number;
+      }> = [
         {
             title: 'Total KPIs',
             value: summary.totalKPIs,

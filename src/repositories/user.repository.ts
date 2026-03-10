@@ -18,7 +18,7 @@ export class UserRepository extends BaseRepository<User> {
 
         if (!item) return null;
 
-        return this.mapToUser(item);
+        return this.mapToUser(item as unknown as Record<string, unknown>);
     }
 
     async getByEmail(email: string): Promise<User | null> {
@@ -33,7 +33,7 @@ export class UserRepository extends BaseRepository<User> {
 
         if (result.items.length === 0) return null;
 
-        return this.mapToUser(result.items[0] as Record<string, unknown>);
+        return this.mapToUser(result.items[0] as unknown as Record<string, unknown>);
     }
 
     async create(user: Omit<User, 'createdAt' | 'lastLoginAt'>): Promise<User> {
@@ -82,7 +82,7 @@ export class UserRepository extends BaseRepository<User> {
 
         this.logger.info('User preferences updated', { userId });
 
-        return this.mapToUser(updated);
+        return this.mapToUser(updated as unknown as Record<string, unknown>);
     }
 
     async updateLastLogin(userId: string): Promise<void> {
@@ -110,5 +110,3 @@ export class UserRepository extends BaseRepository<User> {
         };
     }
 }
-
-7. SERVICES

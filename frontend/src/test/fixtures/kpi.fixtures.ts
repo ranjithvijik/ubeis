@@ -1,4 +1,4 @@
-import { KPI, KPICategory } from '../../types';
+import { KPI } from '../../types';
 
 export const createMockKPI = (overrides: Partial<KPI> = {}): KPI => ({
     kpiId: 'kpi-001',

@@ -35,6 +35,10 @@ A serverless **Executive Information System (EIS)** designed for the University 
 - [License](#-license)
 - [References](#-references)
 
+**Related docs:** [DEPLOYMENT_README.md](DEPLOYMENT_README.md) (dev deployment, API Gateway, S3) · [TESTING.md](TESTING.md) (unit, integration, coverage)
+
+**One-command dev deploy:** `npm run deploy:dev:auto` (runs tests, build, S3 upload, CloudFormation). See [DEPLOYMENT_README.md](DEPLOYMENT_README.md).
+
 ---
 
 ## ✨ Features
@@ -159,20 +163,21 @@ For experienced developers who want to get up and running quickly:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/university-of-baltimore/uob-eis-mvp.git
-cd uob-eis-mvp
+git clone https://github.com/ranjithvijik/ubeis.git
+cd eis
 
 # 2. Install dependencies
 npm install
+cd frontend && npm install && cd ..
 
-# 3. Copy environment template
-cp .env.example .env
+# 3. (Optional) Copy environment template if present, or create .env with AWS/API settings for local runs
 
-# 4. Edit .env with your AWS settings
-nano .env
+# 4. Run tests (or use automated deploy which runs them)
+npm test
+npm run test:integration
 
-# 5. Deploy everything (infrastructure + code)
-npm run deploy:dev
+# 5. Deploy to dev (automated: install, test, package, S3 upload, CloudFormation)
+npm run deploy:dev:auto
 
 # 6. Create admin user
 npm run create-admin
@@ -180,12 +185,11 @@ npm run create-admin
 # 7. Seed sample data
 npm run seed-data
 
-# 8. Get API endpoint
-aws cloudformation describe-stacks \
-  --stack-name uob-eis-dev \
-  --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
-  --output text
+# 8. Get stack outputs (API endpoint, User Pool ID, etc.)
+aws cloudformation describe-stacks --stack-name eis-dev --query 'Stacks[0].Outputs'
 ```
+
+For detailed first-time deployment (S3 bucket, Lambda zip upload, API Gateway setup), see **[DEPLOYMENT_README.md](DEPLOYMENT_README.md)**.
 
 ---
 
@@ -195,13 +199,13 @@ aws cloudformation describe-stacks \
 
 ```bash
 # Clone via HTTPS
-git clone https://github.com/university-of-baltimore/uob-eis-mvp.git
+git clone https://github.com/ranjithvijik/ubeis.git
 
 # Or clone via SSH
-git clone git@github.com:university-of-baltimore/uob-eis-mvp.git
+git clone git@github.com:ranjithvijik/ubeis.git
 
 # Navigate to project directory
-cd uob-eis-mvp
+cd eis
 ```
 
 ### 2. Install Dependencies
@@ -304,9 +308,11 @@ AWS_PROFILE=uob-eis-profile
 #### Option A: Deploy All at Once (Recommended)
 
 ```bash
-# Deploy complete infrastructure stack
-npm run deploy:infra:dev
+# Build, package Lambdas, and deploy CloudFormation stack (dev)
+npm run deploy:dev
 ```
+
+This runs `npm run package` (TypeScript build + Lambda zip creation) then deploys the stack. For first-time setup (S3 bucket creation, uploading Lambda zips), see **[DEPLOYMENT_README.md](DEPLOYMENT_README.md)**.
 
 #### Option B: Deploy Step by Step
 
@@ -315,22 +321,22 @@ npm run deploy:infra:dev
 aws cloudformation validate-template \
   --template-body file://infrastructure/main.yaml
 
-# Deploy the stack
+# Build and package Lambdas
+npm run package
+
+# Upload Lambda zips to S3 (see DEPLOYMENT_README.md for bucket name)
+# Then deploy the stack
 aws cloudformation deploy \
   --template-file infrastructure/main.yaml \
-  --stack-name uob-eis-dev \
+  --stack-name eis-dev \
   --parameter-overrides \
       Environment=dev \
       UniversityName=UniversityOfBaltimore \
-  --capabilities CAPABILITY_NAMED_IAM \
-  --tags \
-      Application=EIS \
-      Environment=dev \
-      Owner=IT-Department
+  --capabilities CAPABILITY_NAMED_IAM
 
 # Wait for completion
 aws cloudformation wait stack-create-complete \
-  --stack-name uob-eis-dev
+  --stack-name eis-dev
 ```
 
 #### Verify Deployment
@@ -338,56 +344,33 @@ aws cloudformation wait stack-create-complete \
 ```bash
 # Check stack status
 aws cloudformation describe-stacks \
-  --stack-name uob-eis-dev \
+  --stack-name eis-dev \
   --query 'Stacks[0].StackStatus'
 
 # Expected: "CREATE_COMPLETE"
 
 # List all outputs
 aws cloudformation describe-stacks \
-  --stack-name uob-eis-dev \
+  --stack-name eis-dev \
   --query 'Stacks[0].Outputs'
 ```
 
 ### 5. Deploy Lambda Functions
 
-#### Build TypeScript
+Lambda code is packaged and deployed as part of `npm run deploy:dev`. To update only Lambda code after infrastructure exists:
+
+#### Build and Package
 
 ```bash
-# Compile TypeScript to JavaScript
-npm run build
-
-# Output will be in /dist directory
-```
-
-#### Package and Deploy Lambdas
-
-```bash
-# Package Lambda functions
+# Compile TypeScript and create Lambda zip files
 npm run package
 
-# Deploy Lambda code
-npm run deploy:lambdas:dev
+# Output: dist/ (compiled JS), dist/lambdas/*.zip (per-function zips)
 ```
 
-#### Or Deploy Individual Functions
+#### Upload Zips to S3 and Update Stack
 
-```bash
-# Deploy dashboard handler
-aws lambda update-function-code \
-  --function-name UniversityOfBaltimore-EIS-Dashboard-dev \
-  --zip-file fileb://dist/dashboard.zip
-
-# Deploy KPIs handler
-aws lambda update-function-code \
-  --function-name UniversityOfBaltimore-EIS-KPIs-dev \
-  --zip-file fileb://dist/kpis.zip
-
-# Deploy alerts handler
-aws lambda update-function-code \
-  --function-name UniversityOfBaltimore-EIS-Alerts-dev \
-  --zip-file fileb://dist/alerts.zip
-```
+Upload the contents of `dist/lambdas/` to your deployment S3 bucket, then redeploy or update the stack so Lambda functions use the new code. See **[DEPLOYMENT_README.md](DEPLOYMENT_README.md)** for bucket naming and upload commands.
 
 ### 6. Create Admin User
 
@@ -398,7 +381,7 @@ npm run create-admin
 # Or manually via AWS CLI
 aws cognito-idp admin-create-user \
   --user-pool-id $(aws cloudformation describe-stacks \
-      --stack-name uob-eis-dev \
+      --stack-name eis-dev \
       --query 'Stacks[0].Outputs[?OutputKey==`UserPoolId`].OutputValue' \
       --output text) \
   --username admin@ubalt.edu \
@@ -426,7 +409,7 @@ npm run seed-data
 #### Verify Data
 
 ```bash
-# Query DynamoDB to verify data
+# Query DynamoDB to verify data (table name from stack parameters)
 aws dynamodb scan \
   --table-name UniversityOfBaltimore-EIS-Data-dev \
   --max-items 5
@@ -564,14 +547,17 @@ curl -H "Authorization: Bearer $TOKEN" {endpoint}
 
 ## 🖥 Frontend Dashboard
 
+The React dashboard uses **Vite**, **AWS Amplify** (Cognito), and **Recharts**.
+
 ### Start Development Server
 
 ```bash
 cd frontend
-npm start
+npm install
+npm run dev
 ```
 
-Access at: `http://localhost:3000`
+Access at: `http://localhost:5173` (Vite default).
 
 ### Build for Production
 
@@ -580,11 +566,21 @@ cd frontend
 npm run build
 ```
 
+Output is in `frontend/dist/`. Run `npm run preview` to preview the production build locally.
+
+### Frontend Tests
+
+```bash
+cd frontend
+npm test          # Vitest unit/component tests
+npm run test:e2e # Playwright E2E (requires app or CI setup)
+```
+
 ### Deploy to S3/CloudFront
 
 ```bash
-# Sync build to S3
-aws s3 sync frontend/build/ s3://uob-eis-frontend-dev/ --delete
+# Sync Vite build output to S3
+aws s3 sync frontend/dist/ s3://your-frontend-bucket/ --delete
 
 # Invalidate CloudFront cache (if using)
 aws cloudfront create-invalidation \
@@ -596,16 +592,18 @@ aws cloudfront create-invalidation \
 
 ## 🧪 Testing
 
-### Run All Tests
+See **[TESTING.md](TESTING.md)** for full details.
+
+### Backend (Jest)
 
 ```bash
-# Run unit tests
+# Unit tests
 npm test
 
-# Run with coverage
+# With coverage report and thresholds
 npm run test:coverage
 
-# Run integration tests
+# Integration tests (pattern: **/*.integration.test.ts; passes with no tests)
 npm run test:integration
 ```
 
@@ -622,14 +620,9 @@ npm test -- --testPathPattern=services
 npm test -- dashboard.handler.test.ts
 ```
 
-### Expected Coverage
+### Coverage
 
-| Component | Target Coverage |
-|-----------|-----------------|
-| Handlers | > 80% |
-| Services | > 85% |
-| Utils | > 90% |
-| Overall | > 80% |
+Coverage thresholds are set in `jest.config.js`. Current suite includes dashboard handler and KPI service tests; add more tests and raise thresholds as needed.
 
 ---
 
@@ -637,9 +630,9 @@ npm test -- dashboard.handler.test.ts
 
 | Environment | Stack Name | Purpose |
 |-------------|------------|---------|
-| **dev** | `uob-eis-dev` | Development & testing |
-| **staging** | `uob-eis-staging` | Pre-production validation |
-| **prod** | `uob-eis-prod` | Production |
+| **dev** | `eis-dev` | Development & testing |
+| **staging** | `eis-staging` | Pre-production validation |
+| **prod** | `eis-prod` | Production |
 
 ### Deploy to Different Environments
 
@@ -654,13 +647,7 @@ npm run deploy:staging
 npm run deploy:prod
 ```
 
-### Environment-Specific Configuration
-
-Configuration files are in `/infrastructure/parameters/`:
-
-- `dev.json` - Development settings
-- `staging.json` - Staging settings
-- `prod.json` - Production settings
+Each command builds and packages Lambdas, then deploys the CloudFormation stack. For first-time dev deployment (S3 bucket, Lambda zip upload, API Gateway), see **[DEPLOYMENT_README.md](DEPLOYMENT_README.md)**.
 
 ---
 
@@ -673,20 +660,20 @@ Configuration files are in `/infrastructure/parameters/`:
 ```bash
 # Check stack events for errors
 aws cloudformation describe-stack-events \
-  --stack-name uob-eis-dev \
+  --stack-name eis-dev \
   --query 'StackEvents[?ResourceStatus==`CREATE_FAILED`]'
 
 # Delete failed stack and retry
-aws cloudformation delete-stack --stack-name uob-eis-dev
-aws cloudformation wait stack-delete-complete --stack-name uob-eis-dev
+aws cloudformation delete-stack --stack-name eis-dev
+aws cloudformation wait stack-delete-complete --stack-name eis-dev
 ```
 
 #### 2. Lambda Function Timeout
 
 ```bash
-# Increase timeout in CloudFormation or via CLI
+# Increase timeout in CloudFormation or via CLI (function names from your stack)
 aws lambda update-function-configuration \
-  --function-name UniversityOfBaltimore-EIS-Dashboard-dev \
+  --function-name <DashboardFunctionName> \
   --timeout 60
 ```
 
@@ -696,7 +683,7 @@ aws lambda update-function-configuration \
 # Verify user pool exists
 aws cognito-idp describe-user-pool \
   --user-pool-id $(aws cloudformation describe-stacks \
-      --stack-name uob-eis-dev \
+      --stack-name eis-dev \
       --query 'Stacks[0].Outputs[?OutputKey==`UserPoolId`].OutputValue' \
       --output text)
 
@@ -710,18 +697,13 @@ aws cognito-idp admin-set-user-password \
 
 #### 4. DynamoDB Access Denied
 
-```bash
-# Verify IAM role has correct permissions
-aws iam get-role-policy \
-  --role-name UniversityOfBaltimore-EIS-Lambda-Role-dev \
-  --policy-name EISDynamoDBAccess
-```
+Ensure the Lambda execution role has DynamoDB permissions. Role names are defined in the CloudFormation template (`infrastructure/main.yaml`).
 
 ### Get Help
 
 ```bash
-# View Lambda logs
-aws logs tail /aws/lambda/UniversityOfBaltimore-EIS-Dashboard-dev --follow
+# View Lambda logs (replace with your function name from stack outputs)
+aws logs tail /aws/lambda/<YourDashboardFunctionName> --follow
 
 # Check API Gateway logs
 aws logs tail API-Gateway-Execution-Logs_{api-id}/dev --follow

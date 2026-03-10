@@ -164,5 +164,3 @@ className = "px-3 py-1.5 text-sm font-medium text-primary-600 hover:bg-primary-5
 </div>
   );
 };
-
-5. REACT COMPONENTS - COMMON

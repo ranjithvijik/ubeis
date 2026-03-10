@@ -128,5 +128,3 @@ export interface AlertFilters {
     severity?: AlertSeverity;
     status?: AlertStatus;
 }
-
-3. REACT COMPONENTS - DASHBOARD

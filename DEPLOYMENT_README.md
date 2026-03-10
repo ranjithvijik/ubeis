@@ -1,6 +1,38 @@
 # EIS Dev Deployment Guide & Readiness Checklist
 
-## Pre-deployment checklist
+## Automated dev deployment (recommended)
+
+From the project root, with **AWS CLI configured** (`aws sts get-caller-identity` works):
+
+```bash
+npm run deploy:dev:auto
+```
+
+This runs **`scripts/deploy-dev.sh`**, which:
+
+1. Verifies AWS identity and resolves the deploy bucket name
+2. Installs dependencies (`npm ci` or `npm install`)
+3. Runs unit and integration tests
+4. Builds and packages Lambdas (`npm run package`)
+5. Creates the S3 deploy bucket if it doesn’t exist, then uploads `dist/lambdas/*.zip`
+6. Deploys the CloudFormation stack (`eis-dev`)
+
+**Options:**
+
+- `--skip-tests` – skip tests (faster redeploys)
+- `--skip-install` – skip `npm install` (e.g. CI already ran it)
+
+**Environment overrides (optional):**
+
+- `EIS_ENVIRONMENT` – default `dev`
+- `EIS_UNIVERSITY_NAME` – default `UniversityOfBaltimore`
+- `AWS_REGION` – default `us-east-1`
+
+**CI/CD:** The same flow is implemented in **`.github/workflows/deploy-dev.yml`**, which runs on push to `main` or `develop`. Configure repository secrets: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`. Optionally: `FRONTEND_BUCKET_DEV`, `CLOUDFRONT_DIST_DEV` for frontend deploy.
+
+---
+
+## Pre-deployment checklist (manual flow)
 
 ### 1. Environment
 - [ ] **Node.js 18+** – `node -v`

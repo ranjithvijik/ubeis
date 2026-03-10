@@ -1,7 +1,12 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { fetchAuthSession } from 'aws-amplify/auth';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// Prefer VITE_API_BASE_URL (what we set), fall back to VITE_API_URL, then /api.
+// Cast import.meta to any to keep TypeScript happy in non-Vite tooling.
+const API_BASE_URL =
+  (import.meta as any).env?.VITE_API_BASE_URL ||
+  (import.meta as any).env?.VITE_API_URL ||
+  '/api';
 
 class ApiService {
     private client: AxiosInstance;

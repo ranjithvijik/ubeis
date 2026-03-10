@@ -1,4 +1,4 @@
-import { Alert, AlertSeverity, AlertStatus } from '../../types';
+import { Alert } from '../../types';
 
 export const createMockAlert = (overrides: Partial<Alert> = {}): Alert => ({
     alertId: 'alert-001',

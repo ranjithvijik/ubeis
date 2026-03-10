@@ -3,7 +3,6 @@ import { Menu, Bell, Search, Sun, Moon, User, LogOut } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { useAlerts } from '../../hooks/useAlerts';
-import clsx from 'clsx';
 
 interface HeaderProps {
     onMenuClick: () => void;

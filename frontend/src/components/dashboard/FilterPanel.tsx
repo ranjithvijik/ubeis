@@ -83,5 +83,3 @@ className = "px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-prima
         </div>
   );
 };
-
-4. REACT COMPONENTS - ALERTS

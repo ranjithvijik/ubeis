@@ -3,6 +3,7 @@
 // ============================================
 
 import { DynamoDBStreamEvent, DynamoDBRecord } from 'aws-lambda';
+import type { AttributeValue } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { AlertService } from '../services/alert.service';
 import { Logger } from '../utils/logger.util';
@@ -47,7 +48,7 @@ const processRecord = async (record: DynamoDBRecord): Promise<void> => {
     }
 
     // Unmarshall the DynamoDB item
-    const item = unmarshall(newImage as Record<string, unknown>);
+    const item = unmarshall(newImage as unknown as Record<string, AttributeValue>);
 
     // Check if this is a KPI record
     if (!item.PK?.startsWith('KPI#') || item.SK !== 'METADATA') {

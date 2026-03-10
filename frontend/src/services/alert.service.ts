@@ -9,7 +9,7 @@ interface GetAlertsOptions {
 
 class AlertService {
     async getAlerts(options: GetAlertsOptions = {}): Promise<PaginatedResponse<Alert>> {
-        return apiService.get<PaginatedResponse<Alert>>('/alerts', options);
+        return apiService.get<PaginatedResponse<Alert>>('/alerts', options as Record<string, unknown>);
     }
 
     async getAlertById(alertId: string): Promise<Alert> {
@@ -26,5 +26,3 @@ class AlertService {
 }
 
 export const alertService = new AlertService();
-
-8. REACT CONTEXT

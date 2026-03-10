@@ -78,5 +78,3 @@ main().catch((error) => {
     console.error('❌ Packaging failed:', error);
     process.exit(1);
 });
-
-11. AUTOMATED TEST SCRIPTS - UNIT TESTS

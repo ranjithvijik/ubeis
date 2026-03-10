@@ -14,6 +14,7 @@
     "format": "prettier --write src/**/*.ts",
     "package": "npm run build && node scripts/package-lambdas.js",
     "deploy:dev": "npm run package && aws cloudformation deploy --template-file infrastructure/main.yaml --stack-name eis-dev --parameter-overrides Environment=dev --capabilities CAPABILITY_NAMED_IAM",
+    "deploy:dev:auto": "bash scripts/deploy-dev.sh",
     "deploy:staging": "npm run package && aws cloudformation deploy --template-file infrastructure/main.yaml --stack-name eis-staging --parameter-overrides Environment=staging --capabilities CAPABILITY_NAMED_IAM",
     "deploy:prod": "npm run package && aws cloudformation deploy --template-file infrastructure/main.yaml --stack-name eis-prod --parameter-overrides Environment=prod --capabilities CAPABILITY_NAMED_IAM",
     "seed-data": "ts-node scripts/seed-data.ts",

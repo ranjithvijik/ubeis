@@ -1,84 +1,92 @@
+# Automated dev deployment on push to main (or develop).
+# Requires GitHub secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY.
+# Optional: FRONTEND_BUCKET_DEV, CLOUDFRONT_DIST_DEV for frontend deploy.
+
 name: Deploy to Development
 
 on:
-push:
-branches: [develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
 
 env:
-NODE_VERSION: '18'
-AWS_REGION: us - east - 1
-ENVIRONMENT: dev
-STACK_NAME: eis - dev
+  NODE_VERSION: '18'
+  AWS_REGION: us-east-1
+  ENVIRONMENT: dev
+  STACK_NAME: eis-dev
+  UNIVERSITY_NAME: UniversityOfBaltimore
 
 jobs:
-deploy:
-name: Deploy to Dev
-runs - on: ubuntu - latest
-environment: development
+  deploy:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
 
-steps:
-- name: Checkout code
-uses: actions / checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-- name: Setup Node.js
-uses: actions / setup - node@v4
-with:
-node - version: ${ { env.NODE_VERSION } }
-cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-    - name: Install dependencies
-run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Build application
-run: npm run build
+      - name: Run tests
+        run: |
+          npm test -- --passWithNoTests
+          npm run test:integration
 
-    - name: Configure AWS credentials
-uses: aws - actions / configure - aws - credentials@v4
-with:
-aws - access - key - id: ${ { secrets.AWS_ACCESS_KEY_ID } }
-aws - secret - access - key: ${ { secrets.AWS_SECRET_ACCESS_KEY } }
-aws - region: ${ { env.AWS_REGION } }
+      - name: Build and package Lambdas
+        run: npm run package
 
-- name: Package Lambda functions
-run: npm run package
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Deploy CloudFormation stack
-run: |
-    aws cloudformation deploy \
---template - file infrastructure / main.yaml \
---stack - name ${ { env.STACK_NAME } } \
---parameter - overrides Environment = ${ { env.ENVIRONMENT } } \
---capabilities CAPABILITY_NAMED_IAM \
---no - fail - on - empty - changeset
+      - name: Ensure S3 deploy bucket and upload Lambda zips
+        run: |
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          DEPLOY_BUCKET="${AWS_ACCOUNT_ID}-${{ env.UNIVERSITY_NAME }}-eis-deployments"
+          if ! aws s3api head-bucket --bucket "$DEPLOY_BUCKET" 2>/dev/null; then
+            aws s3api create-bucket --bucket "$DEPLOY_BUCKET" --region ${{ env.AWS_REGION }}
+          fi
+          aws s3 sync dist/lambdas/ "s3://${DEPLOY_BUCKET}/lambdas/" --exclude "*" --include "*.zip"
 
-    - name: Deploy Lambda code
-run: |
-          for func in dashboard kpis alerts alert - processor reports; do
-            aws lambda update - function- code \
---function- name UniversityOfBaltimore - EIS - ${ func ^} -${ { env.ENVIRONMENT } } \
---zip - file fileb://dist/lambdas/${func}.zip \
-              || echo "Function ${func} not found, skipping..."
-done
+      - name: Deploy CloudFormation stack
+        run: |
+          aws cloudformation deploy \
+            --template-file infrastructure/main.yaml \
+            --stack-name ${{ env.STACK_NAME }} \
+            --parameter-overrides Environment=${{ env.ENVIRONMENT }} UniversityName=${{ env.UNIVERSITY_NAME }} \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region ${{ env.AWS_REGION }} \
+            --no-fail-on-empty-changeset
 
-    - name: Deploy frontend to S3
-run: |
-    aws s3 sync frontend / dist / s3://${{ secrets.FRONTEND_BUCKET_DEV }}/ --delete
+      - name: Output stack info
+        run: |
+          aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} --query 'Stacks[0].Outputs' --output table || true
 
-- name: Invalidate CloudFront cache
-run: |
-    aws cloudfront create - invalidation \
---distribution - id ${ { secrets.CLOUDFRONT_DIST_DEV } } \
---paths "/*"
+      - name: Deploy frontend to S3 (optional)
+        if: ${{ secrets.FRONTEND_BUCKET_DEV != '' }}
+        run: |
+          cd frontend && npm ci && npm run build && cd ..
+          aws s3 sync frontend/dist/ "s3://${{ secrets.FRONTEND_BUCKET_DEV }}/" --delete
 
-    - name: Run smoke tests
-run: npm run test: smoke
-env:
-API_URL: ${ { secrets.API_URL_DEV } }
+      - name: Invalidate CloudFront cache (optional)
+        if: ${{ secrets.CLOUDFRONT_DIST_DEV != '' }}
+        run: |
+          aws cloudfront create-invalidation --distribution-id "${{ secrets.CLOUDFRONT_DIST_DEV }}" --paths "/*"
 
-- name: Notify on success
-if: success()
-run: echo "✅ Deployment to DEV successful!"
+      - name: Notify on success
+        if: success()
+        run: echo "Deployment to DEV finished successfully."
 
-    - name: Notify on failure
-if: failure()
-run: echo "❌ Deployment to DEV failed!"
+      - name: Notify on failure
+        if: failure()
+        run: echo "Deployment to DEV failed."

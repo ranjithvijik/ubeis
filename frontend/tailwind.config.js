@@ -55,5 +55,3 @@ export default {
     },
     plugins: [],
 };
-
-2. REACT COMPONENTS - CORE

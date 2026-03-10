@@ -29,7 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (getIsMounted && !getIsMounted()) return;
 
             // 2. Attempt to fetch attributes, but don't destroy session if this fails
-            let attributes: Record<string, string> = {};
+            let attributes: Record<string, string | undefined> = {};
             try {
                 attributes = await fetchUserAttributes();
             } catch (attrError) {
