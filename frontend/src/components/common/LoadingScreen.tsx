@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { GraduationCap } from 'lucide-react';
+import ubaltLogo from '../../assets/ubalt-logo.svg';
 
 export const LoadingScreen: React.FC = () => {
     return (
@@ -16,7 +16,7 @@ className = "text-center"
 transition = {{ duration: 2, repeat: Infinity, ease: 'linear' }}
 className = "w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4"
     >
-    <GraduationCap className="w-8 h-8 text-primary-500" />
+    <img src={ubaltLogo} alt="University of Baltimore" className="h-9 w-auto" />
         </motion.div>
         < h2 className = "text-xl font-semibold text-white mb-2" >
             Loading EIS Dashboard

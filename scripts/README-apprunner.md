@@ -25,7 +25,7 @@ The frontend is built with `VITE_API_BASE_URL=https://p2ecdhgpp3.us-east-1.awsap
 | Role | Purpose |
 |------|--------|
 | `ubeis-apprunner-ecr-access` | App Runner pulls the container image from ECR (trust: `build.apprunner.amazonaws.com`). |
-| `ubeis-apprunner-instance-role` | Container runtime access to DynamoDB and SNS (trust: `tasks.apprunner.amazonaws.com`). |
+| `ubeis-apprunner-instance-role` | Container runtime access to DynamoDB, SNS, and S3 reports bucket (trust: `tasks.apprunner.amazonaws.com`). |
 
 Policy files: `apprunner-ecr-access-*.json`, `apprunner-instance-role-*.json`, `apprunner-instance-policy.json`.
 
@@ -33,6 +33,7 @@ Policy files: `apprunner-ecr-access-*.json`, `apprunner-instance-role-*.json`, `
 
 - `DYNAMODB_TABLE` = `UniversityOfBaltimore-EIS-Data-dev`
 - `SNS_ALERTS_TOPIC` = `arn:aws:sns:us-east-1:535002849180:UniversityOfBaltimore-EIS-Alerts-dev`
+- `REPORTS_BUCKET` = `535002849180-universityofbaltimore-eis-reports-dev`
 - `AWS_REGION` = `us-east-1`
 - `ENVIRONMENT` = `dev`
 - `LOG_LEVEL` = `INFO`
@@ -57,3 +58,13 @@ Policy files: `apprunner-ecr-access-*.json`, `apprunner-instance-role-*.json`, `
 ```bash
 aws apprunner create-service --cli-input-json file://scripts/apprunner-create-service.json --region us-east-1
 ```
+
+## No KPIs or data displayed?
+
+1. **Log in** – Dashboard and KPIs require a valid Cognito session. If you see "Could not load dashboard" or "Not logged in", sign in at the app and retry.
+2. **Seed sample data** – If the dashboard loads but shows "No KPIs to display", the DynamoDB table may be empty. From the repo root:
+   ```bash
+   DYNAMODB_TABLE=UniversityOfBaltimore-EIS-Data-dev AWS_REGION=us-east-1 npm run seed-data
+   ```
+3. **Cognito callback URLs** – For the CloudFront frontend, ensure the Cognito User Pool app client has **Allowed callback URLs** and **Allowed sign-out URLs** that include your frontend origin (e.g. `https://d2j0wdkaazlq7r.cloudfront.net`).
+4. **Reports** – Reports require `REPORTS_BUCKET` set on the App Runner service and the instance role must have S3 PutObject/GetObject on that bucket. Update the instance role policy (`apprunner-instance-policy.json`) and redeploy, or set `REPORTS_BUCKET` in the App Runner console and attach S3 access to the instance role.

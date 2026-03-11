@@ -128,3 +128,59 @@ export interface AlertFilters {
     severity?: AlertSeverity;
     status?: AlertStatus;
 }
+
+// --------------------------------------------
+// Transaction Types (Drill-down)
+// --------------------------------------------
+
+export type TransactionKind =
+    | 'enrollment_event'
+    | 'application_event'
+    | 'financial_posting'
+    | 'system_event'
+    | 'other';
+
+export interface KPITransaction {
+    transactionId: string;
+    kpiId: string;
+    occurredAt: string;
+    kind: TransactionKind;
+    amount?: number;
+    value?: number;
+    unit?: string;
+    sourceSystem?: string;
+    description: string;
+    attributes?: Record<string, unknown>;
+}
+
+// Report Types
+export type ReportType = 'executive_summary' | 'enrollment' | 'financial' | 'academic' | 'custom';
+export type ReportFormat = 'pdf' | 'excel' | 'csv';
+
+export interface Report {
+    reportId: string;
+    userId: string;
+    type: ReportType;
+    title: string;
+    description?: string;
+    format: ReportFormat;
+    parameters: Record<string, unknown>;
+    s3Key: string;
+    s3Bucket: string;
+    fileSize: number;
+    generatedAt: string;
+    expiresAt: string;
+}
+
+export interface ReportWithDownloadUrl extends Report {
+    downloadUrl?: string;
+}
+
+export interface GenerateReportRequest {
+    type: ReportType;
+    title: string;
+    description?: string;
+    format: ReportFormat;
+    parameters?: Record<string, unknown>;
+    dateRange?: { start: string; end: string };
+}

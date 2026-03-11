@@ -5,12 +5,15 @@ import jwt from 'jsonwebtoken';
 import { DashboardService } from './services/dashboard.service';
 import { KPIService } from './services/kpi.service';
 import { AlertService } from './services/alert.service';
+import { ReportService } from './services/report.service';
+import { TransactionService } from './services/transaction.service';
 import { Logger } from './utils/logger.util';
 import {
     validate,
     dashboardQuerySchema,
     paginationSchema,
     kpiDetailQuerySchema,
+    generateReportSchema,
 } from './utils/validation.util';
 import { ValidationError } from './utils/validation.util';
 import { AuthenticationError, AuthorizationError } from './middleware/auth.middleware';
@@ -35,6 +38,8 @@ app.use(express.json());
 const dashboardService = new DashboardService();
 const kpiService = new KPIService();
 const alertService = new AlertService();
+const reportService = new ReportService();
+const transactionService = new TransactionService();
 
 interface AuthenticatedRequest extends Request {
     user?: UserContext;
@@ -174,6 +179,17 @@ app.get('/kpis/:kpiId', async (req: AuthenticatedRequest, res: Response, next: N
     }
 });
 
+app.get('/kpis/:kpiId/transactions', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { kpiId } = req.params;
+        const pagination = validate(paginationSchema, req.query);
+        const result = await transactionService.getTransactionsForKPI(kpiId, pagination);
+        res.json({ data: result });
+    } catch (error) {
+        next(error);
+    }
+});
+
 app.post('/kpis', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const user = req.user as UserContext;
@@ -230,6 +246,43 @@ app.post('/alerts/:alertId/resolve', async (req: AuthenticatedRequest, res: Resp
         const { alertId } = req.params;
         const alert = await alertService.resolveAlert(alertId);
         res.json({ data: alert });
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Reports
+app.get('/reports', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const user = req.user as UserContext;
+        const pagination = validate(paginationSchema, req.query);
+        const result = await reportService.listReports(user.userId, pagination);
+        res.json({ data: result });
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.post('/reports', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const user = req.user as UserContext;
+        const body = validate(generateReportSchema, req.body);
+        const report = await reportService.generateReport(user, body);
+        res.status(201).json({ data: report });
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.get('/reports/:reportId/download', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const user = req.user as UserContext;
+        const { reportId } = req.params;
+        const downloadUrl = await reportService.getDownloadUrl(user.userId, reportId);
+        if (!downloadUrl) {
+            throw new NotFoundError('Report', reportId);
+        }
+        res.json({ data: { downloadUrl } });
     } catch (error) {
         next(error);
     }

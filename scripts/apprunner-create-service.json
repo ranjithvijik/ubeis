@@ -12,6 +12,7 @@
         "RuntimeEnvironmentVariables": {
           "DYNAMODB_TABLE": "UniversityOfBaltimore-EIS-Data-dev",
           "SNS_ALERTS_TOPIC": "arn:aws:sns:us-east-1:535002849180:UniversityOfBaltimore-EIS-Alerts-dev",
+          "REPORTS_BUCKET": "535002849180-universityofbaltimore-eis-reports-dev",
           "AWS_REGION": "us-east-1",
           "ENVIRONMENT": "dev",
           "LOG_LEVEL": "INFO",

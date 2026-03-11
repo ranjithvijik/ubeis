@@ -26,6 +26,12 @@
       "Effect": "Allow",
       "Action": ["sns:Publish"],
       "Resource": "arn:aws:sns:us-east-1:535002849180:UniversityOfBaltimore-EIS-Alerts-dev"
+    },
+    {
+      "Sid": "S3Reports",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+      "Resource": "arn:aws:s3:::535002849180-universityofbaltimore-eis-reports-dev/*"
     }
   ]
 }

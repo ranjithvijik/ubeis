@@ -38,6 +38,11 @@ export const buildKPIHistoryKey = (kpiId: string, date: string) => ({
     SK: `HISTORY#${date}`,
 });
 
+export const buildKPITransactionKey = (kpiId: string, occurredAt: string, transactionId: string) => ({
+    PK: `KPI#${kpiId}`,
+    SK: `TX#${occurredAt}#${transactionId}`,
+});
+
 export const buildAlertKey = (alertId: string) => ({
     PK: `ALERT#${alertId}`,
     SK: 'METADATA',

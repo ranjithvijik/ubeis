@@ -1,11 +1,11 @@
-# 🎓 University of Baltimore - Executive Information System (EIS) MVP
+# 🎓 University of Baltimore - Executive Information System (UBalt EIS) MVP
 
 [![AWS](https://img.shields.io/badge/AWS-CloudFormation-orange?logo=amazon-aws)](https://aws.amazon.com/cloudformation/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18.x-green?logo=node.js)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-A **Executive Information System (EIS)** for the University of Baltimore, providing real-time dashboards, KPI tracking, and executive alerts for university leadership. Backend runs on **AWS App Runner** (Docker/Express); frontend is hosted on **CloudFront + S3**; data and auth use **CloudFormation** (Cognito, DynamoDB, SNS).
+A **Executive Information System (EIS)** for the University of Baltimore, providing real-time dashboards, KPI tracking, executive alerts, and drill-down from KPIs to transaction-level records. Backend runs on **AWS App Runner** (Docker/Express); frontend is hosted on **CloudFront + S3**; data and auth use **CloudFormation** (Cognito, DynamoDB, SNS, S3 Reports bucket).
 
 > **Why EIS over ERP?** Universities and K-12 institutions benefit from implementing an Executive Information System rather than relying solely on ERP processes. EIS provides strategic decision-making capabilities with real-time insights, while ERP focuses on operational transactions. This approach aligns with digital resource bricolage principles for educational institutions (Cui, 2021).
 
@@ -44,9 +44,10 @@ A **Executive Information System (EIS)** for the University of Baltimore, provid
 ## ✨ Features
 
 ### Executive Dashboard
-- 📊 **Real-time KPI visualization** - Enrollment, financial, and academic metrics
+- 📊 **Modern KPI indicators** - Status pill, delta chip, and sparkline trend at a glance
+- 🔎 **Drill-down to transactions** - View transaction-level records behind aggregated KPI values
 - 🔔 **Proactive alerts** - Threshold-based notifications for executives
-- 📈 **Trend analysis** - Historical data comparison and forecasting
+- 📈 **Trend analysis** - Historical comparisons (KPI history rows in DynamoDB)
 - 📱 **Responsive design** - Works on desktop, tablet, and mobile
 
 ### University KPIs Tracked
@@ -60,10 +61,11 @@ A **Executive Information System (EIS)** for the University of Baltimore, provid
 
 ### Technical Features
 - 🔐 **Role-based access control** - Cognito authentication with custom roles
-- ⚡ **Serverless architecture** - Auto-scaling, pay-per-use pricing
+- 🧱 **Container backend** - Express API on AWS App Runner (Docker + ECR)
 - 🏗️ **Infrastructure as Code** - Reproducible deployments via CloudFormation
-- 📝 **Audit logging** - Complete trail of data access and changes
-- 🔄 **Real-time updates** - DynamoDB Streams for live data sync
+- 🗂️ **Single-table DynamoDB design** - KPIs, alerts, history, reports, and KPI transactions
+- 🧾 **Reports API** - Generate CSV-based reports and download via S3 presigned URLs
+- 🏷️ **UBalt branding** - Official UBalt logo in header/sidebar
 
 ---
 
@@ -76,7 +78,8 @@ A **Executive Information System (EIS)** for the University of Baltimore, provid
 │                                                                          │
 │  ┌──────────────┐                    ┌────────────────────────────────┐ │
 │  │   Frontend   │───────────────────▶│  App Runner (Express API)      │ │
-│  │   (React)    │  HTTPS + CORS      │  /dashboard, /kpis, /alerts    │ │
+│  │   (React)    │  HTTPS + CORS      │  /dashboard, /kpis, /alerts,   │ │
+│  │             │                    │  /reports, /kpis/:id/transactions│ │
 │  │ CloudFront   │                    │  Image: ECR (Docker)            │ │
 │  │   + S3       │                    └────────────────────────────────┘ │
 │  └──────────────┘                                    │                  │
@@ -247,7 +250,7 @@ cp .env.example .env
 Open `.env` in your preferred editor and configure:
 
 ```bash
-# .env - Environment Configuration for UoB EIS MVP
+# .env - Environment Configuration for UBalt EIS MVP
 
 # ============================================
 # AWS Configuration
@@ -260,7 +263,7 @@ AWS_ACCOUNT_ID=123456789012
 # ============================================
 ENVIRONMENT=dev
 UNIVERSITY_NAME=UniversityOfBaltimore
-APP_NAME=uob-eis
+APP_NAME=ubalt-eis
 
 # ============================================
 # Stack Names (auto-generated, can override)
@@ -397,14 +400,14 @@ aws cognito-idp admin-create-user \
 ### 7. Seed Sample Data
 
 ```bash
-# Seed sample KPI data for testing
+# Seed document-shaped KPI data for testing (KPIs + history + alerts + KPI transactions)
 npm run seed-data
 
 # This will populate:
-# - Sample enrollment KPIs
-# - Sample financial metrics
-# - Sample academic performance data
-# - Sample alerts
+# - KPIs (including document-derived enrollment series)
+# - KPI history rows (SK: HISTORY#...)
+# - KPI transaction rows for drill-down (SK: TX#...)
+# - Active alerts
 ```
 
 #### Verify Data
@@ -509,8 +512,14 @@ curl -H "Authorization: Bearer $TOKEN" {endpoint}
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/reports` | List available reports |
-| `POST` | `/reports/generate` | Generate new report |
+| `POST` | `/reports` | Generate new report (CSV content for MVP) |
 | `GET` | `/reports/{reportId}/download` | Download report file |
+
+#### KPI Transactions (Drill-down)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/kpis/{kpiId}/transactions` | List transaction-level records for a KPI |
 
 ---
 
@@ -548,7 +557,7 @@ curl -H "Authorization: Bearer $TOKEN" {endpoint}
 
 ## 🖥 Frontend Dashboard
 
-The React dashboard uses **Vite**, **AWS Amplify** (Cognito), and **Recharts**.
+The React dashboard uses **Vite** and **AWS Amplify Auth (Cognito)**.
 
 ### Start Development Server
 

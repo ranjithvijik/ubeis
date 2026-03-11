@@ -7,9 +7,9 @@ import {
     FileText,
     Settings,
     ChevronLeft,
-    GraduationCap,
 } from 'lucide-react';
 import clsx from 'clsx';
+import ubaltLogo from '../../assets/ubalt-logo.svg';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -39,13 +39,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
         {/* Logo */ }
         < div className = "flex items-center justify-between h-16 px-4 border-b border-primary-400" >
             <div className="flex items-center gap-3" >
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center" >
-                    <GraduationCap className="w-6 h-6 text-primary-500" />
-                        </div>
+                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center overflow-hidden" >
+                    <img
+                        src={ubaltLogo}
+                        alt="UBalt"
+                        className="h-7 w-auto"
+                    />
+                </div>
     {
         isOpen && (
             <div>
-            <h1 className="font-bold text-lg" > UoB EIS </h1>
+            <h1 className="font-bold text-lg" > UBalt EIS </h1>
                 < p className = "text-xs text-primary-200" > Executive Dashboard </p>
                     </div>
           )}

@@ -36,6 +36,7 @@ export class AlertRepository extends BaseRepository<Alert> {
         let keyCondition = 'GSI1PK = :pk';
         const expressionValues: Record<string, unknown> = {
             ':pk': 'ALERT#ACTIVE',
+            ':active': 'active',
         };
 
         if (severity) {

@@ -30,6 +30,30 @@ export interface KPIHistoryPoint {
     recordedAt: string;
 }
 
+// --------------------------------------------
+// Transaction Types (Drill-down)
+// --------------------------------------------
+
+export type TransactionKind =
+    | 'enrollment_event'
+    | 'application_event'
+    | 'financial_posting'
+    | 'system_event'
+    | 'other';
+
+export interface KPITransaction {
+    transactionId: string;
+    kpiId: string;
+    occurredAt: string;
+    kind: TransactionKind;
+    amount?: number;
+    value?: number;
+    unit?: string;
+    sourceSystem?: string;
+    description: string;
+    attributes?: Record<string, unknown>;
+}
+
 export interface KPI {
     kpiId: string;
     name: string;

@@ -3,6 +3,7 @@ import { Menu, Bell, Search, Sun, Moon, User, LogOut } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { useAlerts } from '../../hooks/useAlerts';
+import ubaltLogo from '../../assets/ubalt-logo.svg';
 
 interface HeaderProps {
     onMenuClick: () => void;
@@ -27,6 +28,25 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         >
         <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </button>
+
+            {/* Brand */ }
+            <div className="hidden sm:flex items-center gap-3">
+                <a href="https://www.ubalt.edu/" target="_blank" rel="noreferrer" className="flex items-center gap-3">
+                    <img
+                        src={ubaltLogo}
+                        alt="University of Baltimore"
+                        className="h-8 w-auto"
+                    />
+                    <div className="leading-tight">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                            Executive Information System
+                        </div>
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-1 max-w-[520px]">
+                            The University of Baltimore offers career-focused education for aspiring and current professionals.
+                        </div>
+                    </div>
+                </a>
+            </div>
 
     {/* Search */ }
     <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg" >

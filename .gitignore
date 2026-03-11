@@ -33,3 +33,11 @@ coverage/
 tmp/
 temp/
 *.tmp
+
+# Local data extracts (avoid committing large binaries)
+*.pdf
+*.PDF
+*.xlsx
+*.XLSX
+*.xls
+*.XLS

@@ -56,8 +56,11 @@ class ApiService {
 
     private handleError(error: AxiosError): Error {
         if (error.response?.data) {
-            const data = error.response.data as { error?: { message?: string } };
-            return new Error(data.error?.message || 'An error occurred');
+            const data = error.response.data as { error?: { message?: string }; message?: string };
+            const msg = data.error?.message ?? data.message;
+            if (msg) return new Error(String(msg));
+            if (error.response.status === 401) return new Error('Not logged in or session expired. Please sign in again.');
+            return new Error('An error occurred');
         }
 
         if (error.request) {
