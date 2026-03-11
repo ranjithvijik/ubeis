@@ -6,9 +6,16 @@ import clsx from 'clsx';
 import { KPI } from '../../types';
 import { formatValue, formatPercent } from '../../utils/formatters';
 
+interface KPICardMetrics {
+    rankInCategory?: number;
+    categorySize?: number;
+    contributionPercent?: number;
+}
+
 interface KPICardProps {
     kpi: KPI;
     onClick?: () => void;
+    metrics?: KPICardMetrics;
 }
 
 const statusColors = {
@@ -59,11 +66,35 @@ const sparklinePath = (values: number[], width = 96, height = 28): string | null
     return pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`).join(' ');
 };
 
-export const KPICard: React.FC<KPICardProps> = ({ kpi, onClick }) => {
+const computeYoYChangePercent = (kpi: KPI): number | undefined => {
+    const history = [...(kpi.history || [])].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    if (history.length < 2) return undefined;
+
+    const latest = history[history.length - 1];
+    // Try to find a point roughly one year before; fallback to previous point
+    const latestYear = new Date(latest.date).getFullYear();
+    let prev = history[history.length - 2];
+    for (let i = history.length - 2; i >= 0; i--) {
+        const yr = new Date(history[i].date).getFullYear();
+        if (latestYear - yr === 1) {
+            prev = history[i];
+            break;
+        }
+    }
+    if (!prev || prev.value === 0) return undefined;
+
+    const change = ((latest.value - prev.value) / Math.abs(prev.value)) * 100;
+    return Number(change.toFixed(1));
+};
+
+export const KPICard: React.FC<KPICardProps> = ({ kpi, onClick, metrics }) => {
     const colors = statusColors[kpi.status];
     const TrendIcon = trendIcons[kpi.trend];
     const historyValues = (kpi.history || []).slice(-14).map((h) => h.value);
     const spark = sparklinePath(historyValues);
+    const yoyChangePercent = computeYoYChangePercent(kpi);
 
     const statusLabels = {
         on_target: 'On Target',
@@ -145,7 +176,7 @@ export const KPICard: React.FC<KPICardProps> = ({ kpi, onClick }) => {
                 </div>
 
                 {/* Progress */}
-                <div className="mb-4">
+                <div className="mb-3">
                     <div className="h-2.5 bg-gray-200/80 dark:bg-gray-800 rounded-full overflow-hidden">
                         <div
                             className={clsx('h-full rounded-full transition-all duration-500', colors.progress)}
@@ -154,6 +185,35 @@ export const KPICard: React.FC<KPICardProps> = ({ kpi, onClick }) => {
                             }}
                         />
                     </div>
+                </div>
+
+                {/* Derived metrics: rank, contribution, YoY */}
+                <div className="mb-4 flex flex-wrap gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                    {metrics?.rankInCategory != null && metrics.categorySize != null && (
+                        <span className="px-2 py-0.5 rounded-full bg-gray-100/80 dark:bg-gray-800/70">
+                            Rank #{metrics.rankInCategory} of {metrics.categorySize} in {kpi.category}
+                        </span>
+                    )}
+                    {metrics?.contributionPercent != null && (
+                        <span className="px-2 py-0.5 rounded-full bg-gray-100/80 dark:bg-gray-800/70">
+                            {metrics.contributionPercent}% of{' '}
+                            {kpi.category === 'financial' ? 'financial total' : 'enrollment total'}
+                        </span>
+                    )}
+                    {yoyChangePercent != null && (
+                        <span
+                            className={clsx(
+                                'px-2 py-0.5 rounded-full',
+                                yoyChangePercent > 0
+                                    ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-200'
+                                    : yoyChangePercent < 0
+                                      ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200'
+                                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800/70 dark:text-gray-300'
+                            )}
+                        >
+                            YoY {formatPercent(yoyChangePercent)} vs last year
+                        </span>
+                    )}
                 </div>
 
                 {/* Footer */}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { KPI, DashboardSummary as DashboardSummaryType } from '../../types';
 import { formatValue } from '../../utils/formatters';
 
@@ -28,6 +29,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
 
   const radarKpis = topKpis.slice(0, 6);
   const parallelKpis = topKpis.slice(0, 5);
+  const navigate = useNavigate();
 
   return (
     <section className="space-y-4">
@@ -244,7 +246,14 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
         </div>
 
         {/* 4. Area chart for a single KPI's history */}
-        <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4">
+        <div
+          className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => {
+            if (firstWithHistory) {
+              navigate(`/kpis/${firstWithHistory.kpiId}`);
+            }
+          }}
+        >
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
             KPI History (Area)
           </h3>
@@ -276,6 +285,11 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
               })()}
             </svg>
           </div>
+          {firstWithHistory && (
+            <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400 truncate">
+              {firstWithHistory.name}
+            </p>
+          )}
         </div>
 
         {/* 5. Bar chart by category */}
@@ -327,19 +341,29 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
                 const radius = 55;
                 const n = radarKpis.length || 3;
                 const rings = 4;
-                for (let r = 1; r <= rings; r++) {
+
+                const gridPaths = Array.from({ length: rings }).map((_, rIndex) => {
+                  const r = rIndex + 1;
                   const frac = r / rings;
-                  const path: string[] = [];
+                  const segments: string[] = [];
                   for (let i = 0; i < n; i++) {
                     const angle = (2 * Math.PI * i) / n - Math.PI / 2;
                     const x = centerX + radius * frac * Math.cos(angle);
                     const y = centerY + radius * frac * Math.sin(angle);
-                    path.push(`${i === 0 ? 'M' : 'L'} ${x} ${y}`);
+                    segments.push(`${i === 0 ? 'M' : 'L'} ${x} ${y}`);
                   }
-                  path.push('Z');
-                  // eslint-disable-next-line no-unused-expressions
-                  <path key={`grid-${r}`} d={path.join(' ')} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />;
-                }
+                  segments.push('Z');
+                  return (
+                    <path
+                      key={`grid-${r}`}
+                      d={segments.join(' ')}
+                      fill="none"
+                      stroke="#e5e7eb"
+                      strokeWidth={0.5}
+                    />
+                  );
+                });
+
                 const pts = radarKpis.map((k, i) => {
                   const angle = (2 * Math.PI * i) / n - Math.PI / 2;
                   const norm = normalize(k.currentValue, minVal, maxVal);
@@ -351,9 +375,10 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
                   pts.length > 0
                     ? pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x} ${y}`).join(' ') + ' Z'
                     : '';
+
                 return (
                   <>
-                    <circle cx={centerX} cy={centerY} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
+                    {gridPaths}
                     {d && (
                       <path
                         d={d}
@@ -385,14 +410,16 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
                 const size = 0.8 + norm * 1.1; // 0.8–1.9rem
                 const weight = norm > 0.7 ? 'font-semibold' : norm > 0.4 ? 'font-medium' : 'font-normal';
                 return (
-                  <span
+                  <button
                     key={k.kpiId}
-                    className={`rounded-full px-2.5 py-1 bg-sky-100/60 dark:bg-sky-900/50 text-sky-900 dark:text-sky-100 ${weight}`}
+                    type="button"
+                    onClick={() => navigate(`/kpis/${k.kpiId}`)}
+                    className={`rounded-full px-2.5 py-1 bg-sky-100/60 dark:bg-sky-900/50 text-sky-900 dark:text-sky-100 ${weight} hover:bg-sky-200/70 dark:hover:bg-sky-800/70 transition`}
                     style={{ fontSize: `${size}rem` }}
                     title={`${k.name} – ${formatValue(k.currentValue, k.unit)}`}
                   >
                     {k.name}
-                  </span>
+                  </button>
                 );
               })}
             </div>
@@ -502,15 +529,21 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
                     : 'bg-rose-500';
               return (
                 <div key={k.kpiId} className="flex items-center gap-2">
-                  <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate w-36">
-                    {k.name}
-                  </span>
-                  <div className="flex-1 h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                    <div
-                      className={`h-full ${barColor}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/kpis/${k.kpiId}`)}
+                    className="flex items-center gap-2 flex-1 group"
+                  >
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate w-36 text-left group-hover:text-gray-900 dark:group-hover:text-gray-100">
+                      {k.name}
+                    </span>
+                    <div className="flex-1 h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                      <div
+                        className={`h-full ${barColor}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </button>
                 </div>
               );
             })}

@@ -4,10 +4,47 @@ import { KPICard } from '../components/dashboard/KPICard';
 import { DashboardVisualGallery } from '../components/dashboard/DashboardVisualGallery';
 import { useDashboard } from '../hooks/useDashboard';
 import { useNavigate } from 'react-router-dom';
+import type { KPI } from '../types';
 
 const DashboardPage: React.FC = () => {
   const { data, isLoading, isError, error, refetch } = useDashboard({ period: 'monthly', category: 'all' });
   const navigate = useNavigate();
+
+  const metricsById: Record<
+    string,
+    {
+      rankInCategory: number;
+      categorySize: number;
+      contributionPercent?: number;
+    }
+  > = React.useMemo(() => {
+    if (!data) return {};
+
+    const byCategory: Record<string, KPI[]> = {};
+    data.kpis.forEach((kpi) => {
+      if (!byCategory[kpi.category]) byCategory[kpi.category] = [];
+      byCategory[kpi.category].push(kpi);
+    });
+
+    const result: Record<string, { rankInCategory: number; categorySize: number; contributionPercent?: number }> = {};
+
+    Object.entries(byCategory).forEach(([category, list]) => {
+      const sorted = [...list].sort((a, b) => b.currentValue - a.currentValue);
+      const total = sorted.reduce((sum, k) => sum + k.currentValue, 0);
+      sorted.forEach((kpi, idx) => {
+        const metrics: { rankInCategory: number; categorySize: number; contributionPercent?: number } = {
+          rankInCategory: idx + 1,
+          categorySize: sorted.length,
+        };
+        if ((category === 'enrollment' || category === 'financial') && total > 0) {
+          metrics.contributionPercent = Number(((kpi.currentValue / total) * 100).toFixed(1));
+        }
+        result[kpi.kpiId] = metrics;
+      });
+    });
+
+    return result;
+  }, [data]);
 
   if (isLoading && !data) {
     return (
@@ -51,6 +88,7 @@ const DashboardPage: React.FC = () => {
             <KPICard
               key={kpi.kpiId}
               kpi={kpi}
+              metrics={metricsById[kpi.kpiId]}
               onClick={() => navigate(`/kpis/${kpi.kpiId}`)}
             />
           ))}

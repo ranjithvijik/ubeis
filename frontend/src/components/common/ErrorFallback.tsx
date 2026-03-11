@@ -1,14 +1,11 @@
 import React from 'react';
 import { FallbackProps } from 'react-error-boundary';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 export const ErrorFallback: React.FC<FallbackProps> = ({
     error,
     resetErrorBoundary,
 }) => {
-    const navigate = useNavigate();
-
     return (
         <div className= "min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4" >
         <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 text-center" >
@@ -32,7 +29,7 @@ export const ErrorFallback: React.FC<FallbackProps> = ({
         )}
 
 <div className="flex gap-3 justify-center" >
-    <button
+            <button
             onClick={ resetErrorBoundary }
 className = "flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
     >
@@ -40,7 +37,7 @@ className = "flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded
         Try Again
             </button>
             < button
-onClick = {() => navigate('/')}
+onClick = {() => { window.location.href = '/'; }}
 className = "flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
     >
     <Home className="w-4 h-4" />

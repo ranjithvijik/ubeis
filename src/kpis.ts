@@ -1,4 +1,3 @@
-// Entry module for KPIs Lambda in AWS.
-// Re-exports the actual handler implementation.
-export { handler } from './handlers/kpis.handler';
-
+// Legacy Lambda entrypoint (no longer used).
+// Kept only so older TypeScript builds that referenced this file still compile.
+export {};

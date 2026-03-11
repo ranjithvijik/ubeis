@@ -176,27 +176,71 @@ export class ReportService {
                 doc.on('end', () => resolve(Buffer.concat(chunks)));
                 doc.on('error', reject);
 
-                doc.fontSize(18).text(title, { align: 'left' });
-                doc.moveDown(0.25);
-                doc.fontSize(10).fillColor('#666666').text(`Generated: ${new Date().toISOString()}`);
+                // Header
+                doc
+                    .fillColor('#0f172a')
+                    .fontSize(20)
+                    .text(title, { align: 'left' });
+
+                doc
+                    .fontSize(10)
+                    .fillColor('#64748b')
+                    .text(`Generated: ${new Date().toLocaleString()}`);
+
                 doc.moveDown(1);
 
-                doc.fillColor('#111111').fontSize(12).text('Summary');
+                // Summary block
+                doc
+                    .fontSize(12)
+                    .fillColor('#0f172a')
+                    .text('Executive Summary', { underline: false });
                 doc.moveDown(0.5);
-                doc.fontSize(10).fillColor('#111111');
-                doc.text(`Total KPIs: ${dashboard.summary.totalKPIs}`);
-                doc.text(`On Target: ${dashboard.summary.kpisOnTarget}`);
-                doc.text(`At Risk: ${dashboard.summary.kpisAtRisk}`);
-                doc.text(`Below Target: ${dashboard.summary.kpisBelowTarget}`);
+
+                doc.fontSize(10);
+
+                const summaryData = [
+                    { label: 'Total KPIs', value: dashboard.summary.totalKPIs },
+                    { label: 'On Target', value: dashboard.summary.kpisOnTarget },
+                    { label: 'At Risk', value: dashboard.summary.kpisAtRisk },
+                    { label: 'Below Target', value: dashboard.summary.kpisBelowTarget },
+                ];
+
+                summaryData.forEach((item, idx) => {
+                    const y = doc.y;
+                    const labelColor =
+                        idx === 1
+                            ? '#16a34a'
+                            : idx === 2
+                                ? '#eab308'
+                                : idx === 3
+                                    ? '#dc2626'
+                                    : '#0f172a';
+
+                    doc
+                        .fillColor('#94a3b8')
+                        .text(item.label, 50, y, { continued: true });
+                    doc
+                        .fillColor(labelColor)
+                        .text(String(item.value), { align: 'left' });
+                });
+
                 doc.moveDown(1);
 
-                doc.fillColor('#111111').fontSize(12).text('KPIs');
+                // KPI table
+                doc.fillColor('#0f172a').fontSize(12).text('KPI Detail');
                 doc.moveDown(0.5);
 
                 // Simple tabular layout (no external table plugin)
-                const colX = { name: 50, current: 300, target: 390, status: 480 };
+                const colX = { name: 50, current: 260, target: 350, status: 450 };
                 const startY = doc.y;
-                doc.fontSize(9).fillColor('#444444');
+                // Header background
+                doc
+                    .save()
+                    .rect(45, startY - 2, 515, 18)
+                    .fill('#0f172a');
+                doc.restore();
+
+                doc.fontSize(9).fillColor('#f9fafb');
                 doc.text('Name', colX.name, startY);
                 doc.text('Current', colX.current, startY, { width: 80, align: 'right' });
                 doc.text('Target', colX.target, startY, { width: 80, align: 'right' });
@@ -205,18 +249,38 @@ export class ReportService {
                 doc.strokeColor('#DDDDDD').moveTo(50, doc.y).lineTo(560, doc.y).stroke();
                 doc.moveDown(0.4);
 
-                doc.fontSize(9).fillColor('#111111');
+                doc.fontSize(9).fillColor('#111827');
                 const maxRows = 40;
                 const rows = dashboard.kpis.slice(0, maxRows);
-                for (const kpi of rows) {
+                rows.forEach((kpi, index) => {
                     const y = doc.y;
-                    doc.text(String(kpi.name), colX.name, y, { width: 240 });
+
+                    // Zebra striping
+                    if (index % 2 === 1) {
+                        doc.save();
+                        doc.rect(45, y - 1, 515, 14).fill('#f1f5f9');
+                        doc.restore();
+                    }
+
+                    doc.fillColor('#0f172a');
+                    doc.text(String(kpi.name), colX.name, y, { width: 200 });
+
+                    doc.fillColor('#0f172a');
                     doc.text(String(kpi.currentValue), colX.current, y, { width: 80, align: 'right' });
                     doc.text(String(kpi.targetValue), colX.target, y, { width: 80, align: 'right' });
-                    doc.text(String(kpi.status).replace(/_/g, ' '), colX.status, y);
+
+                    const statusText = String(kpi.status).replace(/_/g, ' ');
+                    const statusColor =
+                        kpi.status === 'on_target'
+                            ? '#16a34a'
+                            : kpi.status === 'at_risk'
+                                ? '#eab308'
+                                : '#dc2626';
+                    doc.fillColor(statusColor).text(statusText, colX.status, y);
+
                     doc.moveDown(0.6);
                     if (doc.y > 720) doc.addPage();
-                }
+                });
 
                 if (dashboard.kpis.length > maxRows) {
                     doc.moveDown(0.5);
@@ -239,7 +303,7 @@ export class ReportService {
         const wsSummary = wb.addWorksheet('Summary');
         wsSummary.columns = [
             { header: 'Field', key: 'field', width: 28 },
-            { header: 'Value', key: 'value', width: 22 },
+            { header: 'Value', key: 'value', width: 32 },
         ];
         wsSummary.addRows([
             { field: 'Report', value: title },
@@ -249,7 +313,12 @@ export class ReportService {
             { field: 'At Risk', value: dashboard.summary.kpisAtRisk },
             { field: 'Below Target', value: dashboard.summary.kpisBelowTarget },
         ]);
-        wsSummary.getRow(1).font = { bold: true };
+        wsSummary.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        wsSummary.getRow(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF0F172A' },
+        };
 
         const ws = wb.addWorksheet('KPIs');
         ws.columns = [
@@ -263,7 +332,13 @@ export class ReportService {
             { header: 'Change %', key: 'changePercent', width: 12 },
             { header: 'Last Updated', key: 'lastUpdated', width: 22 },
         ];
-        ws.getRow(1).font = { bold: true };
+        ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+        ws.getRow(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF0F172A' },
+        };
 
         for (const kpi of dashboard.kpis) {
             ws.addRow({
@@ -282,6 +357,21 @@ export class ReportService {
         // Basic styling
         ws.views = [{ state: 'frozen', ySplit: 1 }];
         wsSummary.views = [{ state: 'frozen', ySplit: 1 }];
+
+        // Zebra striping for KPI rows
+        ws.eachRow((row, rowNumber) => {
+            if (rowNumber === 1) return;
+            if (rowNumber % 2 === 0) {
+                row.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFF9FAFB' },
+                };
+            }
+        });
+
+        // Number formatting for change %
+        ws.getColumn('changePercent').numFmt = '0.0"%"';
 
         const arr = (await wb.xlsx.writeBuffer()) as ArrayBuffer;
         return Buffer.from(arr);

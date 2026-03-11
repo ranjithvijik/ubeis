@@ -1,4 +1,3 @@
-// Entry module for Dashboard Lambda in AWS.
-// Re-exports the actual handler implementation.
-export { handler } from './handlers/dashboard.handler';
-
+// Legacy Lambda entrypoint (no longer used).
+// Kept only so older TypeScript builds that referenced this file still compile.
+export {}; 
