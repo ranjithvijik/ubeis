@@ -27,3 +27,18 @@ export const useGenerateReport = () => {
         },
     });
 };
+
+export const useDeleteReport = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (reportId: string) => reportService.deleteReport(reportId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['reports'] });
+            toast.success('Report deleted');
+        },
+        onError: (error: Error) => {
+            toast.error(`Failed to delete report: ${error.message}`);
+        },
+    });
+};

@@ -288,6 +288,17 @@ app.get('/reports/:reportId/download', async (req: AuthenticatedRequest, res: Re
     }
 });
 
+app.delete('/reports/:reportId', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const user = req.user as UserContext;
+        const { reportId } = req.params;
+        await reportService.deleteReport(user.userId, reportId);
+        res.status(200).json({ data: { success: true } });
+    } catch (error) {
+        next(error);
+    }
+});
+
 app.use(errorMiddleware);
 
 app.listen(port, () => {

@@ -18,6 +18,10 @@ class ReportService {
     async getDownloadUrl(reportId: string): Promise<{ downloadUrl: string }> {
         return apiService.get<{ downloadUrl: string }>(`/reports/${reportId}/download`);
     }
+
+  async deleteReport(reportId: string): Promise<void> {
+    await apiService.delete<void>(`/reports/${reportId}`);
+  }
 }
 
 export const reportService = new ReportService();

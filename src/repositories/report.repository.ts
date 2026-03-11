@@ -55,6 +55,11 @@ export class ReportRepository extends BaseRepository<Report> {
         await this.putItem(item);
     }
 
+    async delete(userId: string, reportId: string): Promise<void> {
+        const { PK, SK } = buildReportKey(userId, reportId);
+        await this.deleteItem(PK, SK);
+    }
+
     private mapToReport(item: Record<string, unknown>): Report {
         return {
             reportId: item.reportId as string,

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useReports, useGenerateReport } from '../hooks/useReports';
+import { useReports, useGenerateReport, useDeleteReport } from '../hooks/useReports';
 import type { ReportType, ReportFormat, GenerateReportRequest } from '../types';
 import { reportService } from '../services/report.service';
-import { FileText, Download, Loader2 } from 'lucide-react';
+import { FileText, Download, Loader2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const REPORT_TYPES: { value: ReportType; label: string }[] = [
@@ -21,7 +21,8 @@ const REPORT_FORMATS: { value: ReportFormat; label: string }[] = [
 
 const ReportsPage: React.FC = () => {
     const { data, isLoading, isError, error, refetch } = useReports({ limit: 50 });
-    const generateReport = useGenerateReport();
+  const generateReport = useGenerateReport();
+  const deleteReport = useDeleteReport();
     const [title, setTitle] = useState('');
     const [type, setType] = useState<ReportType>('executive_summary');
     const [format, setFormat] = useState<ReportFormat>('csv');
@@ -45,6 +46,12 @@ const ReportsPage: React.FC = () => {
             toast.error(err instanceof Error ? err.message : 'Failed to get download link');
         }
     };
+
+  const handleDelete = (reportId: string, title: string) => {
+    const confirmed = window.confirm(`Delete report "${title}"?\nThis will remove it from history (the underlying file may already be expired).`);
+    if (!confirmed) return;
+    deleteReport.mutate(reportId);
+  };
 
     const formatDate = (iso: string) => {
         try {
@@ -163,7 +170,7 @@ const ReportsPage: React.FC = () => {
                                         Generated
                                     </th>
                                     <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Action
+                                        Actions
                                     </th>
                                 </tr>
                             </thead>
@@ -183,14 +190,25 @@ const ReportsPage: React.FC = () => {
                                             {formatDate(report.generatedAt)}
                                         </td>
                                         <td className="px-4 py-3 text-right">
-                                            <button
-                                                type="button"
-                                                onClick={() => handleDownload(report.reportId)}
-                                                className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
-                                            >
-                                                <Download className="w-4 h-4" />
-                                                Download
-                                            </button>
+                                            <div className="inline-flex items-center gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDownload(report.reportId)}
+                                                    className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                                                >
+                                                    <Download className="w-4 h-4" />
+                                                    Download
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={deleteReport.isPending}
+                                                    onClick={() => handleDelete(report.reportId, report.title)}
+                                                    className="inline-flex items-center gap-1 text-sm font-medium text-red-600 dark:text-red-400 hover:underline disabled:opacity-50"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                    Delete
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

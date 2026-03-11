@@ -2,7 +2,7 @@
 // Report Service
 // ============================================
 
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
 import PDFDocument from 'pdfkit';
@@ -50,6 +50,34 @@ export class ReportService {
 
     async getReportById(userId: string, reportId: string): Promise<Report | null> {
         return this.reportRepository.getById(userId, reportId);
+    }
+
+    async deleteReport(userId: string, reportId: string): Promise<void> {
+        const existing = await this.reportRepository.getById(userId, reportId);
+        if (!existing) {
+            // Nothing to do if it doesn't exist or doesn't belong to this user
+            return;
+        }
+
+        // Best-effort delete of underlying S3 object
+        try {
+            if (existing.s3Bucket && existing.s3Key) {
+                await this.s3.send(
+                    new DeleteObjectCommand({
+                        Bucket: existing.s3Bucket,
+                        Key: existing.s3Key,
+                    })
+                );
+            }
+        } catch (err) {
+            this.logger.warn('Failed to delete report object from S3', {
+                reportId,
+                error: (err as Error).message,
+            });
+        }
+
+        await this.reportRepository.delete(userId, reportId);
+        this.logger.info('Report deleted', { reportId, userId });
     }
 
     async getDownloadUrl(userId: string, reportId: string): Promise<string | null> {
@@ -177,23 +205,12 @@ export class ReportService {
                 doc.on('error', reject);
 
                 // Header
-                doc
-                    .fillColor('#0f172a')
-                    .fontSize(20)
-                    .text(title, { align: 'left' });
-
-                doc
-                    .fontSize(10)
-                    .fillColor('#64748b')
-                    .text(`Generated: ${new Date().toLocaleString()}`);
-
+                doc.fillColor('#0f172a').fontSize(20).text(title, { align: 'left' });
+                doc.fontSize(10).fillColor('#64748b').text(`Generated: ${new Date().toLocaleString()}`);
                 doc.moveDown(1);
 
                 // Summary block
-                doc
-                    .fontSize(12)
-                    .fillColor('#0f172a')
-                    .text('Executive Summary', { underline: false });
+                doc.fontSize(12).fillColor('#0f172a').text('Executive Summary', { underline: false });
                 doc.moveDown(0.5);
 
                 doc.fontSize(10);
@@ -208,35 +225,85 @@ export class ReportService {
                 summaryData.forEach((item, idx) => {
                     const y = doc.y;
                     const labelColor =
-                        idx === 1
-                            ? '#16a34a'
-                            : idx === 2
-                                ? '#eab308'
-                                : idx === 3
-                                    ? '#dc2626'
-                                    : '#0f172a';
+                        idx === 1 ? '#16a34a' : idx === 2 ? '#eab308' : idx === 3 ? '#dc2626' : '#0f172a';
 
-                    doc
-                        .fillColor('#94a3b8')
-                        .text(item.label, 50, y, { continued: true });
-                    doc
-                        .fillColor(labelColor)
-                        .text(String(item.value), { align: 'left' });
+                    doc.fillColor('#94a3b8').text(item.label, 50, y, { continued: true });
+                    doc.fillColor(labelColor).text(String(item.value), { align: 'left' });
                 });
 
                 doc.moveDown(1);
 
+                // CXO Insights: highlight underperforming metrics prominently
+                const kpis = dashboard.kpis;
+                const underperforming = kpis.filter((k) => k.status === 'below_target');
+                const atRisk = kpis.filter((k) => k.status === 'at_risk');
+
+                // Sort by gap to target (largest gap first)
+                const sortByGapDesc = (list: typeof kpis) =>
+                    [...list].sort((a, b) => {
+                        const gapA = a.targetValue ? (a.targetValue - a.currentValue) / Math.abs(a.targetValue) : 0;
+                        const gapB = b.targetValue ? (b.targetValue - b.currentValue) / Math.abs(b.targetValue) : 0;
+                        return gapB - gapA;
+                    });
+
+                const topBelow = sortByGapDesc(underperforming).slice(0, 5);
+                const topAtRisk = sortByGapDesc(atRisk).slice(0, 5);
+
+                if (topBelow.length || topAtRisk.length) {
+                    doc.fillColor('#0f172a').fontSize(12).text('Key Risks & Underperforming Metrics');
+                    doc.moveDown(0.5);
+                    doc.fontSize(9);
+
+                    if (topBelow.length) {
+                        doc.fillColor('#dc2626').text('Critical (Below Target):');
+                        doc.moveDown(0.25);
+                        topBelow.forEach((k) => {
+                            const gapPercent = k.targetValue
+                                ? (((k.targetValue - k.currentValue) / Math.abs(k.targetValue)) * 100).toFixed(1)
+                                : '0.0';
+                            doc
+                                .fillColor('#0f172a')
+                                .text(`• ${k.name}`, { indent: 10, continued: true })
+                                .fillColor('#64748b')
+                                .text(
+                                    `  | Current: ${k.currentValue} ${k.unit}  Target: ${k.targetValue} ${k.unit}  Gap: ${gapPercent}%`,
+                                    { continued: false }
+                                );
+                        });
+                        doc.moveDown(0.5);
+                    }
+
+                    if (topAtRisk.length) {
+                        doc.fillColor('#eab308').text('At Risk (Approaching Thresholds):');
+                        doc.moveDown(0.25);
+                        topAtRisk.forEach((k) => {
+                            const gapPercent = k.targetValue
+                                ? (((k.targetValue - k.currentValue) / Math.abs(k.targetValue)) * 100).toFixed(1)
+                                : '0.0';
+                            doc
+                                .fillColor('#0f172a')
+                                .text(`• ${k.name}`, { indent: 10, continued: true })
+                                .fillColor('#64748b')
+                                .text(
+                                    `  | Current: ${k.currentValue} ${k.unit}  Target: ${k.targetValue} ${k.unit}  Gap: ${gapPercent}%`,
+                                    { continued: false }
+                                );
+                        });
+                        doc.moveDown(1);
+                    }
+                }
+
                 // KPI table
                 doc.fillColor('#0f172a').fontSize(12).text('KPI Detail');
-                doc.moveDown(0.5);
+                doc.moveDown(0.75);
 
                 // Simple tabular layout (no external table plugin)
-                const colX = { name: 50, current: 260, target: 350, status: 450 };
+                const colX = { name: 55, current: 265, target: 355, status: 455 };
                 const startY = doc.y;
-                // Header background
+                // Header background with a bit more padding
                 doc
                     .save()
-                    .rect(45, startY - 2, 515, 18)
+                    .rect(45, startY - 4, 515, 20)
                     .fill('#0f172a');
                 doc.restore();
 
@@ -258,7 +325,7 @@ export class ReportService {
                     // Zebra striping
                     if (index % 2 === 1) {
                         doc.save();
-                        doc.rect(45, y - 1, 515, 14).fill('#f1f5f9');
+                        doc.rect(45, y - 2, 515, 18).fill('#f1f5f9');
                         doc.restore();
                     }
 
@@ -278,7 +345,8 @@ export class ReportService {
                                 : '#dc2626';
                     doc.fillColor(statusColor).text(statusText, colX.status, y);
 
-                    doc.moveDown(0.6);
+                    // Slightly more generous row spacing
+                    doc.moveDown(0.8);
                     if (doc.y > 720) doc.addPage();
                 });
 
@@ -358,9 +426,14 @@ export class ReportService {
         ws.views = [{ state: 'frozen', ySplit: 1 }];
         wsSummary.views = [{ state: 'frozen', ySplit: 1 }];
 
-        // Zebra striping for KPI rows
+        // Zebra striping + row heights for KPI rows
         ws.eachRow((row, rowNumber) => {
-            if (rowNumber === 1) return;
+            // Header already styled
+            if (rowNumber === 1) {
+                row.height = 20;
+                return;
+            }
+            row.height = 18;
             if (rowNumber % 2 === 0) {
                 row.fill = {
                     type: 'pattern',
@@ -372,6 +445,78 @@ export class ReportService {
 
         // Number formatting for change %
         ws.getColumn('changePercent').numFmt = '0.0"%"';
+
+        // Insights sheet: CXO-level view of underperforming metrics
+        const wsInsights = wb.addWorksheet('Insights');
+        wsInsights.columns = [
+            { header: 'KPI Name', key: 'name', width: 40 },
+            { header: 'Category', key: 'category', width: 14 },
+            { header: 'Status', key: 'status', width: 14 },
+            { header: 'Current', key: 'currentValue', width: 14 },
+            { header: 'Target', key: 'targetValue', width: 14 },
+            { header: 'Gap to Target %', key: 'gapPercent', width: 16 },
+            { header: 'Change %', key: 'changePercent', width: 14 },
+        ];
+        wsInsights.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        wsInsights.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+        wsInsights.getRow(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF0F172A' },
+        };
+
+        const underperforming = dashboard.kpis.filter((k) => k.status === 'below_target');
+        const atRisk = dashboard.kpis.filter((k) => k.status === 'at_risk');
+
+        const sortByGapDesc = (list: typeof dashboard.kpis) =>
+            [...list].sort((a, b) => {
+                const gapA = a.targetValue ? (a.targetValue - a.currentValue) / Math.abs(a.targetValue) : 0;
+                const gapB = b.targetValue ? (b.targetValue - b.currentValue) / Math.abs(b.targetValue) : 0;
+                return gapB - gapA;
+            });
+
+        const topBelow = sortByGapDesc(underperforming).slice(0, 10);
+        const topAtRisk = sortByGapDesc(atRisk).slice(0, 10);
+
+        const addInsightRow = (kpi: typeof dashboard.kpis[number]) => {
+            const gapPercent = kpi.targetValue
+                ? ((kpi.targetValue - kpi.currentValue) / Math.abs(kpi.targetValue)) * 100
+                : 0;
+            wsInsights.addRow({
+                name: kpi.name,
+                category: kpi.category,
+                status: String(kpi.status).replace(/_/g, ' '),
+                currentValue: kpi.currentValue,
+                targetValue: kpi.targetValue,
+                gapPercent,
+                changePercent: kpi.changePercent,
+            });
+        };
+
+        topBelow.forEach(addInsightRow);
+        topAtRisk.forEach(addInsightRow);
+
+        // Style insights rows – highlight critical vs at-risk
+        wsInsights.eachRow((row, rowNumber) => {
+            if (rowNumber === 1) return;
+            const statusCell = row.getCell('status');
+            const statusValue = String(statusCell.value || '').toLowerCase();
+            if (statusValue.includes('below')) {
+                row.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFEE2E2' }, // light red
+                };
+            } else if (statusValue.includes('risk')) {
+                row.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFEF9C3' }, // light yellow
+                };
+            }
+        });
+        wsInsights.getColumn('gapPercent').numFmt = '0.0"%"';
+        wsInsights.getColumn('changePercent').numFmt = '0.0"%"';
 
         const arr = (await wb.xlsx.writeBuffer()) as ArrayBuffer;
         return Buffer.from(arr);
