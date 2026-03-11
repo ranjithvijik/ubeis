@@ -8,15 +8,16 @@
       "ImageIdentifier": "535002849180.dkr.ecr.us-east-1.amazonaws.com/ubeis-backend-dev:latest",
       "ImageRepositoryType": "ECR",
       "ImageConfiguration": {
-        "Port": "3000",
-        "RuntimeEnvironmentVariables": {
-          "DYNAMODB_TABLE": "UniversityOfBaltimore-EIS-Data-dev",
-          "SNS_ALERTS_TOPIC": "arn:aws:sns:us-east-1:535002849180:UniversityOfBaltimore-EIS-Alerts-dev",
-          "REPORTS_BUCKET": "535002849180-universityofbaltimore-eis-reports-dev",
-          "AWS_REGION": "us-east-1",
-          "ENVIRONMENT": "dev",
-          "LOG_LEVEL": "INFO",
-          "NODE_ENV": "production"
+      "Port": "3000",
+      "RuntimeEnvironmentVariables": {
+      "DYNAMODB_TABLE": "UniversityOfBaltimore-EIS-Data-dev",
+      "SNS_ALERTS_TOPIC": "arn:aws:sns:us-east-1:535002849180:UniversityOfBaltimore-EIS-Alerts-dev",
+      "REPORTS_BUCKET": "535002849180-universityofbaltimore-eis-reports-dev",
+      "AWS_REGION": "us-east-1",
+      "ENVIRONMENT": "dev",
+      "LOG_LEVEL": "INFO",
+      "NODE_ENV": "production",
+      "COGNITO_USER_POOL_ID": "us-east-1_qxP60gQiH"
         }
       }
     },

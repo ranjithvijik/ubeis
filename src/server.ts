@@ -14,6 +14,7 @@ import {
     paginationSchema,
     kpiDetailQuerySchema,
     generateReportSchema,
+    createAdminUserSchema,
 } from './utils/validation.util';
 import { ValidationError } from './utils/validation.util';
 import { AuthenticationError, AuthorizationError } from './middleware/auth.middleware';
@@ -25,6 +26,7 @@ import type {
     DashboardRequest,
     AlertSeverity,
 } from './types';
+import { AdminService } from './services/admin.service';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -40,6 +42,7 @@ const kpiService = new KPIService();
 const alertService = new AlertService();
 const reportService = new ReportService();
 const transactionService = new TransactionService();
+const adminService = new AdminService();
 
 interface AuthenticatedRequest extends Request {
     user?: UserContext;
@@ -246,6 +249,36 @@ app.post('/alerts/:alertId/resolve', async (req: AuthenticatedRequest, res: Resp
         const { alertId } = req.params;
         const alert = await alertService.resolveAlert(alertId);
         res.json({ data: alert });
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Admin - User management (Cognito)
+app.get('/admin/users', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const user = req.user as UserContext;
+        if (user.role !== 'admin') {
+            throw new AuthorizationError('Only admins can list users');
+        }
+
+        const users = await adminService.listUsers(100);
+        res.json({ data: users });
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.post('/admin/users', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const user = req.user as UserContext;
+        if (user.role !== 'admin') {
+            throw new AuthorizationError('Only admins can create users');
+        }
+
+        const body = validate(createAdminUserSchema, req.body);
+        const created = await adminService.createUser(body as any);
+        res.status(201).json({ data: created });
     } catch (error) {
         next(error);
     }

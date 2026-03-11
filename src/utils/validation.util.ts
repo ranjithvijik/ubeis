@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import { KPI_CATEGORIES } from '../constants/kpi.constants';
 import { ALERT_SEVERITIES } from '../constants/alert.constants';
+import { USER_ROLES } from '../constants/role.constants';
 
 // KPI Schemas
 export const createKPISchema = z.object({
@@ -57,6 +58,18 @@ export const generateReportSchema = z.object({
         start: z.string().datetime(),
         end: z.string().datetime(),
     }).optional(),
+});
+
+// Admin User Schemas
+export const createAdminUserSchema = z.object({
+    email: z.string().email(),
+    firstName: z.string().max(100).optional(),
+    lastName: z.string().max(100).optional(),
+    role: z.enum(USER_ROLES as [string, ...string[]]),
+    temporaryPassword: z
+        .string()
+        .min(8, 'Password must be at least 8 characters long')
+        .max(64),
 });
 
 // Query Parameter Schemas

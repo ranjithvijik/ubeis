@@ -96,178 +96,137 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
           </div>
         </div>
 
-        {/* 2. Combo chart: Enrollment vs Financial over last history points */}
+        {/* 2. Enrollment vs Financial comparison (clickable bars) */}
         <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            Combo: Enrollment vs Financial Trend
+            Enrollment vs Financial Focus
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            Enrollment KPIs (line) compared to financial KPIs (bars), normalized.
+            Share of KPIs by strategic area. Tap a bar to explore those KPIs.
           </p>
-          <div className="h-48">
-            <svg viewBox="0 0 200 140" className="w-full h-full">
-              <rect x={0} y={0} width={200} height={140} fill="transparent" />
-              {[1, 2, 3, 4].map((i) => (
-                <line
-                  key={i}
-                  x1={20}
-                  x2={190}
-                  y1={20 + i * 22}
-                  y2={20 + i * 22}
-                  stroke="#e5e7eb"
-                  strokeWidth={0.5}
-                />
-              ))}
-              {(() => {
-                const points = 8;
-                const enrollSeries = Array.from({ length: points }).map((_, i) => {
-                  const k = enrollment[i % Math.max(enrollment.length || 1, 1)];
-                  return k ? k.currentValue : 0;
-                });
-                const finSeries = Array.from({ length: points }).map((_, i) => {
-                  const k = financial[i % Math.max(financial.length || 1, 1)];
-                  return k ? k.currentValue : 0;
-                });
-                const localMin = Math.min(...enrollSeries, ...finSeries, 0);
-                const localMax = Math.max(...enrollSeries, ...finSeries, 1);
-                const w = 170;
-                const h = 110;
-                const x0 = 20;
-                const y0 = 120;
-
-                const enrollPoints = enrollSeries.map((v, i) => {
-                  const x = x0 + (i / (points - 1)) * w;
-                  const y = y0 - normalize(v, localMin, localMax) * h;
-                  return [x, y] as const;
-                });
-                const path =
-                  enrollPoints.length > 1
-                    ? enrollPoints
-                        .map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x} ${y}`)
-                        .join(' ')
-                    : '';
-
-                return (
-                  <>
-                    {finSeries.map((v, i) => {
-                      const norm = normalize(v, localMin, localMax);
-                      const x = x0 + (i / points) * w + 4;
-                      const barH = norm * h;
-                      return (
-                        <rect
-                          key={`b-${i}`}
-                          x={x}
-                          y={y0 - barH}
-                          width={w / points - 8}
-                          height={barH}
-                          fill="#0ea5e9"
-                          fillOpacity={0.4}
-                        />
-                      );
-                    })}
-                    {path && (
-                      <path
-                        d={path}
-                        fill="none"
-                        stroke="#22c55e"
-                        strokeWidth={2}
-                      />
-                    )}
-                  </>
-                );
-              })()}
-            </svg>
+          <div className="h-40 flex items-end gap-4 justify-around">
+            {[
+              { label: 'Enrollment', value: enrollment.length, color: 'bg-sky-500', search: 'enrollment' },
+              { label: 'Financial', value: financial.length, color: 'bg-emerald-500', search: 'financial' },
+              { label: 'Other', value: topKpis.length - enrollment.length - financial.length, color: 'bg-slate-500', search: '' },
+            ].map((b) => {
+              const total = topKpis.length || 1;
+              const height = total ? (b.value / total) * 100 : 0;
+              const disabled = b.value === 0 || !b.search;
+              return (
+                <button
+                  key={b.label}
+                  type="button"
+                  onClick={() => !disabled && navigate(`/kpis?search=${encodeURIComponent(b.search)}`)}
+                  className={`flex flex-col items-center justify-end h-full group focus:outline-none ${
+                    disabled ? 'opacity-40 cursor-default' : 'cursor-pointer'
+                  }`}
+                  title={
+                    disabled
+                      ? `No KPIs in ${b.label}`
+                      : `View ${b.value} KPI${b.value === 1 ? '' : 's'} in ${b.label}`
+                  }
+                >
+                  <div
+                    className={`w-9 rounded-t-xl transition-all duration-200 group-hover:translate-y-[-3px] group-hover:shadow-lg ${b.color}`}
+                    style={{ height: `${Math.max(height, 10)}%` }}
+                  />
+                  <span className="mt-2 text-xs text-gray-700 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white">
+                    {b.label}
+                  </span>
+                  <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                    {b.value} KPI{b.value === 1 ? '' : 's'}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* 3. Donut chart: KPI status composition */}
+        {/* 3. KPI status composition (drillable bar) */}
         <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4 flex flex-col">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            KPI Status Composition (Donut)
+            KPI Status Composition
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            On target vs at risk vs below target.
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            On target vs at risk vs below target. Click a segment to explore related KPIs.
           </p>
-          <div className="flex-1 flex items-center justify-center">
-            <svg viewBox="0 0 120 120" className="w-40 h-40">
-              {(() => {
-                // Derive counts directly from KPI data to avoid any summary mismatch
-                const statusCounts = kpis.reduce(
-                  (acc, k) => {
-                    if (k.status === 'on_target') acc.on += 1;
-                    else if (k.status === 'at_risk') acc.risk += 1;
-                    else if (k.status === 'below_target') acc.below += 1;
-                    return acc;
-                  },
-                  { on: 0, risk: 0, below: 0 }
-                );
+          {(() => {
+            const statusCounts = kpis.reduce(
+              (acc, k) => {
+                if (k.status === 'on_target') acc.on += 1;
+                else if (k.status === 'at_risk') acc.risk += 1;
+                else if (k.status === 'below_target') acc.below += 1;
+                return acc;
+              },
+              { on: 0, risk: 0, below: 0 }
+            );
+            const total = statusCounts.on + statusCounts.risk + statusCounts.below;
 
-                const segments = [
-                  { value: statusCounts.on, color: '#22c55e' },
-                  { value: statusCounts.risk, color: '#facc15' },
-                  { value: statusCounts.below, color: '#f97373' },
-                ];
-                const rawTotal = segments.reduce((sum, seg) => sum + seg.value, 0);
-                const total = rawTotal > 0 ? rawTotal : 1;
-                let startAngle = -90;
-                const radius = 40;
-                const cx = 60;
-                const cy = 60;
+            const segments = [
+              {
+                key: 'on_target' as KPI['status'],
+                label: 'On Target',
+                count: statusCounts.on,
+                color: 'bg-emerald-500',
+              },
+              {
+                key: 'at_risk' as KPI['status'],
+                label: 'At Risk',
+                count: statusCounts.risk,
+                color: 'bg-amber-500',
+              },
+              {
+                key: 'below_target' as KPI['status'],
+                label: 'Below Target',
+                count: statusCounts.below,
+                color: 'bg-rose-500',
+              },
+            ];
 
-                if (rawTotal <= 0) {
-                  // No status data: render a subtle neutral ring
-                  return (
-                    <circle
-                      cx={cx}
-                      cy={cy}
-                      r={radius}
-                      fill="none"
-                      stroke="#e5e7eb"
-                      strokeWidth={10}
-                      strokeDasharray="4 6"
-                    />
-                  );
-                }
-
-                return segments
-                  .filter((seg) => seg.value > 0)
-                  .map((seg, idx) => {
-                  const angle = (seg.value / total) * 360;
-                  if (!Number.isFinite(angle) || angle <= 0) {
-                    return null;
-                  }
-                  const endAngle = startAngle + angle;
-                  const largeArc = angle > 180 ? 1 : 0;
-                  const rad1 = (Math.PI * startAngle) / 180;
-                  const rad2 = (Math.PI * endAngle) / 180;
-                  const x1 = cx + radius * Math.cos(rad1);
-                  const y1 = cy + radius * Math.sin(rad1);
-                  const x2 = cx + radius * Math.cos(rad2);
-                  const y2 = cy + radius * Math.sin(rad2);
-                  const d = `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
-                  startAngle = endAngle;
-                  return <path key={idx} d={d} fill={seg.color} fillOpacity={0.9} />;
-                });
-              })()}
-              <circle cx={60} cy={60} r={24} fill="white" className="dark:fill-gray-900" />
-              <text
-                x={60}
-                y={58}
-                textAnchor="middle"
-                className="fill-gray-900 dark:fill-gray-100 text-sm font-semibold"
-              >
-                {summary.totalKPIs}
-              </text>
-              <text
-                x={60}
-                y={72}
-                textAnchor="middle"
-                className="fill-gray-500 dark:fill-gray-400 text-[10px]"
-              >
-                KPIs
-              </text>
-            </svg>
-          </div>
+            return (
+              <>
+                <div className="mb-3 h-6 w-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden flex">
+                  {segments.map((seg) => {
+                    const pct = total ? (seg.count / total) * 100 : 0;
+                    if (pct <= 0) return null;
+                    return (
+                      <button
+                        key={seg.key}
+                        type="button"
+                        onClick={() =>
+                          navigate(`/kpis?status=${encodeURIComponent(seg.key)}`)
+                        }
+                        className={`h-full flex-1 ${seg.color} hover:brightness-110 transition`}
+                        style={{ width: `${pct}%` }}
+                        title={`${seg.label}: ${seg.count} KPI${seg.count === 1 ? '' : 's'}`}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-[11px]">
+                  {segments.map((seg) => (
+                    <button
+                      key={`${seg.key}-legend`}
+                      type="button"
+                      onClick={() =>
+                        navigate(`/kpis?status=${encodeURIComponent(seg.key)}`)
+                      }
+                      className="flex flex-col items-start gap-0.5 rounded-lg px-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-800/70 transition text-left"
+                    >
+                      <span className="inline-flex items-center gap-1 text-gray-800 dark:text-gray-100">
+                        <span className={`w-2 h-2 rounded-full ${seg.color}`} />
+                        {seg.label}
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {seg.count} KPI{seg.count === 1 ? '' : 's'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
         </div>
 
         {/* 4. Area chart for a single KPI's history */}

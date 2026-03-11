@@ -2,6 +2,7 @@ import React from 'react';
 import { KPICard } from '../components/dashboard/KPICard';
 import { useDashboard } from '../hooks/useDashboard';
 import { useNavigate, useLocation } from 'react-router-dom';
+import type { KPIStatus } from '../types';
 
 const KPIsPage: React.FC = () => {
   const { data, isLoading, isError, error, refetch } = useDashboard({ period: 'monthly', category: 'all' });
@@ -10,15 +11,16 @@ const KPIsPage: React.FC = () => {
 
   const params = new URLSearchParams(location.search);
   const search = (params.get('search') || '').trim().toLowerCase();
+  const statusParam = (params.get('status') as KPIStatus | null) || null;
 
   const allKpis = data?.kpis ?? [];
-  const filteredKpis = search
-    ? allKpis.filter((kpi) => {
-        const name = kpi.name?.toLowerCase() ?? '';
-        const category = kpi.category?.toLowerCase() ?? '';
-        return name.includes(search) || category.includes(search);
-      })
-    : allKpis;
+  const filteredKpis = allKpis.filter((kpi) => {
+    const name = kpi.name?.toLowerCase() ?? '';
+    const category = kpi.category?.toLowerCase() ?? '';
+    const matchesSearch = search ? name.includes(search) || category.includes(search) : true;
+    const matchesStatus = statusParam ? kpi.status === statusParam : true;
+    return matchesSearch && matchesStatus;
+  });
 
   if (isLoading && !data) {
     return (
@@ -49,9 +51,27 @@ const KPIsPage: React.FC = () => {
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
         All KPIs
       </h1>
-      {search && (
+      {(search || statusParam) && (
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Showing results for <span className="font-medium">"{search}"</span> ({filteredKpis.length} KPI{filteredKpis.length === 1 ? '' : 's'}).
+          Showing
+          {search && (
+            <>
+              {' '}results for <span className="font-medium">"{search}"</span>
+            </>
+          )}
+          {statusParam && (
+            <>
+              {' '}with status{' '}
+              <span className="font-medium">
+                {statusParam === 'on_target'
+                  ? 'On Target'
+                  : statusParam === 'at_risk'
+                    ? 'At Risk'
+                    : 'Below Target'}
+              </span>
+            </>
+          )}
+          {' '}({filteredKpis.length} KPI{filteredKpis.length === 1 ? '' : 's'}).
         </p>
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

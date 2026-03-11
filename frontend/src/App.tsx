@@ -13,6 +13,7 @@ const AlertsPage = React.lazy(() => import('./pages/AlertsPage'));
 const ReportsPage = React.lazy(() => import('./pages/ReportsPage'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage'));
+const AdminUsersPage = React.lazy(() => import('./pages/AdminUsersPage'));
 
 // Layout components
 import { DashboardLayout } from './components/dashboard/DashboardLayout';
@@ -64,6 +65,7 @@ const App: React.FC = () => {
                     <Route path="alerts" element={<AlertsPage />} />
                     <Route path="reports" element={<ReportsPage />} />
                     <Route path="settings" element={<SettingsPage />} />
+                    <Route path="admin/users" element={<AdminUsersPage />} />
                 </Route>
 
                 {/* 404 */}

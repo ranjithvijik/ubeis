@@ -7,6 +7,7 @@ import {
     FileText,
     Settings,
     ChevronLeft,
+    Shield,
 } from 'lucide-react';
 import clsx from 'clsx';
 import ubaltLogo from '../../assets/ubalt-logo.svg';
@@ -16,16 +17,20 @@ interface SidebarProps {
     onToggle: () => void;
 }
 
-const navItems = [
+const baseNavItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/kpis', label: 'KPIs', icon: BarChart3 },
     { path: '/alerts', label: 'Alerts', icon: Bell },
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/settings', label: 'Settings', icon: Settings },
-];
+] as const;
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     const location = useLocation();
+    const navItems =
+        location.pathname.startsWith('/admin')
+            ? [...baseNavItems, { path: '/admin/users', label: 'Admin Users', icon: Shield }]
+            : baseNavItems;
 
     return (
         <aside
