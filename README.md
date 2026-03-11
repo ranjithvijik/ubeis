@@ -44,8 +44,9 @@ A **Executive Information System (EIS)** for the University of Baltimore, provid
 ## ✨ Features
 
 ### Executive Dashboard
-- 📊 **Modern KPI indicators** - Status pill, delta chip, and sparkline trend at a glance
+- 📊 **Modern KPI indicators** - Status pill, delta chip, sparkline trend, rank-in-category, contribution %, and YoY change at a glance
 - 🔎 **Drill-down to transactions** - View transaction-level records behind aggregated KPI values
+- 🧭 **Visual insight gallery** - Tableau-style gallery with gauges, combo charts, donuts, word cloud, underperformance strips, and momentum panels, all with clickable drill-down
 - 🔔 **Proactive alerts** - Threshold-based notifications for executives
 - 📈 **Trend analysis** - Historical comparisons (KPI history rows in DynamoDB)
 - 📱 **Responsive design** - Works on desktop, tablet, and mobile
@@ -60,12 +61,13 @@ A **Executive Information System (EIS)** for the University of Baltimore, provid
 | **Operations** | Facility utilization, IT service uptime, staff ratios |
 
 ### Technical Features
-- 🔐 **Role-based access control** - Cognito authentication with custom roles
+- 🔐 **Role-based access control** - Cognito authentication with custom roles (admin, president, provost, CFO, dean, chair, viewer)
 - 🧱 **Container backend** - Express API on AWS App Runner (Docker + ECR)
 - 🏗️ **Infrastructure as Code** - Reproducible deployments via CloudFormation
 - 🗂️ **Single-table DynamoDB design** - KPIs, alerts, history, reports, and KPI transactions
-- 🧾 **Reports API** - Generate CSV-based reports and download via S3 presigned URLs
-- 🏷️ **UBalt branding** - Official UBalt logo in header/sidebar
+- 🧾 **Reports API (CXO-grade)** - Generate **styled PDF/Excel** reports (color-coded status, zebra striping, insights sheet highlighting underperformers) and download via S3 presigned URLs
+- 🧪 **Realistic seeded data** - KPIs, history, and transactions backfilled from UB docs into DynamoDB (including drill-down)
+- 🏷️ **UBalt branding** - Official UBalt logo and content from `ubalt.edu` in header/sidebar
 
 ---
 
@@ -577,6 +579,15 @@ npm run build
 ```
 
 Output is in `frontend/dist/`. Run `npm run preview` to preview the production build locally.
+
+### Key Screens
+
+- **Dashboard** – KPI tiles with modern status/trend visuals, a rich visual gallery (gauges, combo charts, donut, word cloud, underperformance and momentum views), and drill-down links to KPI detail pages and transactions.
+- **KPIs** – Searchable list of all KPIs (by name or category), each tile clickable to a detailed view.
+- **Alerts** – Active alerts with acknowledge/resolve actions (admin-only for resolve).
+- **Reports** – Generate and download CXO-style PDF/Excel reports with color-coded insights highlighting underperforming metrics.
+- **Settings** – User profile (name, email, role, department, college), theme toggle, and notification preferences.
+- **Admin (via `admin@ubalt.edu`)** – Admin user (created via `npm run create-admin`) can provision KPIs and is the primary owner for future account-provisioning features.
 
 ### Frontend Tests
 

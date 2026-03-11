@@ -5,6 +5,7 @@ import { DashboardVisualGallery } from '../components/dashboard/DashboardVisualG
 import { useDashboard } from '../hooks/useDashboard';
 import { useNavigate } from 'react-router-dom';
 import type { KPI } from '../types';
+import { motion } from 'framer-motion';
 
 const DashboardPage: React.FC = () => {
   const { data, isLoading, isError, error, refetch } = useDashboard({ period: 'monthly', category: 'all' });
@@ -83,16 +84,37 @@ const DashboardPage: React.FC = () => {
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
           Key Performance Indicators
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: {},
+            visible: {
+              transition: {
+                staggerChildren: 0.06,
+                delayChildren: 0.05,
+              },
+            },
+          }}
+        >
           {data?.kpis?.map((kpi) => (
-            <KPICard
+            <motion.div
               key={kpi.kpiId}
-              kpi={kpi}
-              metrics={metricsById[kpi.kpiId]}
-              onClick={() => navigate(`/kpis/${kpi.kpiId}`)}
-            />
+              variants={{
+                hidden: { opacity: 0, y: 10, scale: 0.98 },
+                visible: { opacity: 1, y: 0, scale: 1 },
+              }}
+              transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+            >
+              <KPICard
+                kpi={kpi}
+                metrics={metricsById[kpi.kpiId]}
+                onClick={() => navigate(`/kpis/${kpi.kpiId}`)}
+              />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
         {data && !isLoading && data.kpis.length === 0 && (
           <p className="text-sm text-gray-500 dark:text-gray-400">No KPIs to display. Seed sample data or add KPIs.</p>
         )}

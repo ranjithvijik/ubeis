@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, Minus, ArrowRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, ArrowRight, Users, DollarSign, GraduationCap } from 'lucide-react';
 import clsx from 'clsx';
 import { KPI } from '../../types';
 import { formatValue, formatPercent } from '../../utils/formatters';
@@ -36,6 +36,34 @@ const statusColors = {
         accent: 'from-rose-500/30 via-red-500/10 to-transparent',
         badge: 'bg-rose-100 text-rose-900 dark:bg-rose-900/40 dark:text-rose-200',
         progress: 'bg-rose-500',
+    },
+};
+
+const categoryTokens: Record<
+    string,
+    {
+        label: string;
+        icon: React.ComponentType<{ className?: string }>;
+        pillClass: string;
+    }
+> = {
+    enrollment: {
+        label: 'Enrollment',
+        icon: Users,
+        pillClass:
+            'bg-sky-50 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200 border border-sky-500/30',
+    },
+    financial: {
+        label: 'Financial',
+        icon: DollarSign,
+        pillClass:
+            'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-500/30',
+    },
+    academic: {
+        label: 'Academic',
+        icon: GraduationCap,
+        pillClass:
+            'bg-violet-50 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200 border border-violet-500/30',
     },
 };
 
@@ -95,6 +123,12 @@ export const KPICard: React.FC<KPICardProps> = ({ kpi, onClick, metrics }) => {
     const historyValues = (kpi.history || []).slice(-14).map((h) => h.value);
     const spark = sparklinePath(historyValues);
     const yoyChangePercent = computeYoYChangePercent(kpi);
+    const categoryToken = categoryTokens[kpi.category] || {
+        label: kpi.category,
+        icon: Users,
+        pillClass:
+            'bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-200 border border-slate-500/30',
+    };
 
     const statusLabels = {
         on_target: 'On Target',
@@ -104,13 +138,14 @@ export const KPICard: React.FC<KPICardProps> = ({ kpi, onClick, metrics }) => {
 
     return (
         <motion.div
-            whileHover={{ y: -2 }}
+            whileHover={{ y: -4, scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
             onClick={onClick}
             className={clsx(
                 'relative overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-700/70',
-                'bg-white/80 dark:bg-gray-900/40 backdrop-blur',
-                'shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer',
+                'bg-gradient-to-br from-white/95 via-sky-50/70 to-white/90 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-950',
+                'backdrop-blur shadow-sm hover:shadow-xl hover:shadow-sky-900/20 transition-all duration-200 cursor-pointer',
                 'ring-1',
                 colors.ring
             )}
@@ -126,8 +161,14 @@ export const KPICard: React.FC<KPICardProps> = ({ kpi, onClick, metrics }) => {
                             {kpi.name}
                         </h3>
                         <div className="mt-0.5 flex items-center gap-2">
-                            <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                                {kpi.category}
+                            <span
+                                className={clsx(
+                                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize',
+                                    categoryToken.pillClass
+                                )}
+                            >
+                                <categoryToken.icon className="w-3.5 h-3.5" />
+                                {categoryToken.label}
                             </span>
                             {spark && (
                                 <svg width="96" height="28" viewBox="0 0 96 28" className="opacity-80">

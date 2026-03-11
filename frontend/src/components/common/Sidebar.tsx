@@ -114,8 +114,8 @@ className = "p-1.5 hover:bg-sky-800/70 rounded-lg border border-sky-700/70 trans
                 <p className="text-xs text-sky-100 font-medium" >
                     University of Baltimore
                 </p>
-                < p className = "text-[11px] text-sky-300/80 mt-1" >
-              © 2026 Executive Information System
+                <p className="text-[11px] text-sky-300/80 mt-1">
+                  © 2026 University of Baltimore
                 </p>
             </div>
         </div>

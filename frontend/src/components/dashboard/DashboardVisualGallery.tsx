@@ -28,20 +28,13 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
   const historyValues = firstWithHistory?.history?.map((h) => h.value) ?? [];
 
   const radarKpis = topKpis.slice(0, 6);
-  const parallelKpis = topKpis.slice(0, 5);
   const navigate = useNavigate();
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-        Visual Insight Gallery
-      </h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400">
-        A variety of visual perspectives on UBalt&apos;s KPIs – gauges, distribution, composition,
-        and comparative views – designed to feel closer to a Tableau-style executive dashboard.
-      </p>
+    <section className="space-y-4 relative overflow-hidden rounded-2xl border border-sky-900/10 bg-slate-950/90 bg-[radial-gradient(circle_at_top,_#0ea5e95c,_transparent_55%),radial-gradient(circle_at_bottom,_#3b82f67a,_transparent_55%)] dark:bg-slate-950/95 p-5">
+      <div className="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,rgba(148,163,184,0.14)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.14)_1px,transparent_1px)] [background-size:80px_80px] opacity-70" />
 
-      <div className="grid gap-4 xl:grid-cols-3 lg:grid-cols-2 grid-cols-1">
+      <div className="relative grid gap-4 xl:grid-cols-3 lg:grid-cols-2 grid-cols-1">
         {/* 1. Dial / Gauge for overall health */}
         <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4 flex flex-col">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
@@ -198,19 +191,51 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
           <div className="flex-1 flex items-center justify-center">
             <svg viewBox="0 0 120 120" className="w-40 h-40">
               {(() => {
-                const total = summary.totalKPIs || 1;
+                // Derive counts directly from KPI data to avoid any summary mismatch
+                const statusCounts = kpis.reduce(
+                  (acc, k) => {
+                    if (k.status === 'on_target') acc.on += 1;
+                    else if (k.status === 'at_risk') acc.risk += 1;
+                    else if (k.status === 'below_target') acc.below += 1;
+                    return acc;
+                  },
+                  { on: 0, risk: 0, below: 0 }
+                );
+
                 const segments = [
-                  { value: summary.kpisOnTarget, color: '#22c55e' },
-                  { value: summary.kpisAtRisk, color: '#facc15' },
-                  { value: summary.kpisBelowTarget, color: '#f97373' },
+                  { value: statusCounts.on, color: '#22c55e' },
+                  { value: statusCounts.risk, color: '#facc15' },
+                  { value: statusCounts.below, color: '#f97373' },
                 ];
+                const rawTotal = segments.reduce((sum, seg) => sum + seg.value, 0);
+                const total = rawTotal > 0 ? rawTotal : 1;
                 let startAngle = -90;
                 const radius = 40;
                 const cx = 60;
                 const cy = 60;
 
-                return segments.map((seg, idx) => {
+                if (rawTotal <= 0) {
+                  // No status data: render a subtle neutral ring
+                  return (
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={radius}
+                      fill="none"
+                      stroke="#e5e7eb"
+                      strokeWidth={10}
+                      strokeDasharray="4 6"
+                    />
+                  );
+                }
+
+                return segments
+                  .filter((seg) => seg.value > 0)
+                  .map((seg, idx) => {
                   const angle = (seg.value / total) * 360;
+                  if (!Number.isFinite(angle) || angle <= 0) {
+                    return null;
+                  }
                   const endAngle = startAngle + angle;
                   const largeArc = angle > 180 ? 1 : 0;
                   const rad1 = (Math.PI * startAngle) / 180;
@@ -286,55 +311,73 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
             </svg>
           </div>
           {firstWithHistory && (
-            <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400 truncate">
+            <button
+              type="button"
+              onClick={() => navigate(`/kpis/${firstWithHistory.kpiId}`)}
+              className="mt-2 text-[11px] text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 truncate text-left"
+              title={firstWithHistory.name}
+            >
               {firstWithHistory.name}
-            </p>
+            </button>
           )}
         </div>
 
-        {/* 5. Bar chart by category */}
+        {/* 5. Bar chart by category (clickable filters) */}
         <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
             KPIs by Category (Bars)
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            Count of KPIs per strategic domain.
+            Tap a bar to jump to KPIs in that category.
           </p>
           <div className="h-48 flex items-end gap-4 justify-around">
             {[
-              { label: 'Enrollment', value: enrollment.length, color: 'bg-sky-500' },
-              { label: 'Financial', value: financial.length, color: 'bg-emerald-500' },
-              { label: 'Academic', value: academic.length, color: 'bg-violet-500' },
+              { label: 'Enrollment', value: enrollment.length, color: 'bg-sky-500', search: 'enrollment' },
+              { label: 'Financial', value: financial.length, color: 'bg-emerald-500', search: 'financial' },
+              { label: 'Academic', value: academic.length, color: 'bg-violet-500', search: 'academic' },
             ].map((b) => {
               const height = summary.totalKPIs ? (b.value / summary.totalKPIs) * 100 : 0;
+              const disabled = b.value === 0;
               return (
-                <div key={b.label} className="flex flex-col items-center justify-end h-full">
+                <button
+                  key={b.label}
+                  type="button"
+                  onClick={() => !disabled && navigate(`/kpis?search=${encodeURIComponent(b.search)}`)}
+                  className={`flex flex-col items-center justify-end h-full group focus:outline-none ${
+                    disabled ? 'opacity-40 cursor-default' : 'cursor-pointer'
+                  }`}
+                  title={
+                    disabled
+                      ? `No KPIs in ${b.label}`
+                      : `View ${b.value} KPI${b.value === 1 ? '' : 's'} in ${b.label}`
+                  }
+                >
                   <div
-                    className={`w-8 rounded-t-lg ${b.color}`}
-                    style={{ height: `${Math.max(height, 6)}%` }}
+                    className={`w-8 rounded-t-lg transition-all duration-200 group-hover:translate-y-[-2px] group-hover:shadow-md ${b.color}`}
+                    style={{ height: `${Math.max(height, 10)}%` }}
                   />
-                  <span className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                  <span className="mt-2 text-xs text-gray-700 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white">
                     {b.label}
                   </span>
                   <span className="text-[11px] text-gray-400 dark:text-gray-500">
                     {b.value}
                   </span>
-                </div>
+                </button>
               );
             })}
           </div>
         </div>
 
-        {/* 6. Radar chart for selected KPIs */}
+        {/* 6. Radar chart for selected KPIs (clickable legend) */}
         <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
             Radar: Relative Performance
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            Normalized current values across a small set of KPIs.
+            Normalized current values across a small set of KPIs. Use the legend to drill in.
           </p>
-          <div className="h-48 flex items-center justify-center">
-            <svg viewBox="0 0 160 160" className="w-44 h-44">
+          <div className="h-40 flex items-center justify-center">
+            <svg viewBox="0 0 160 160" className="w-40 h-40">
               {(() => {
                 const centerX = 80;
                 const centerY = 80;
@@ -393,6 +436,22 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
               })()}
             </svg>
           </div>
+          {radarKpis.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {radarKpis.map((k) => (
+                <button
+                  key={k.kpiId}
+                  type="button"
+                  onClick={() => navigate(`/kpis/${k.kpiId}`)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-sky-200/70 dark:border-sky-700/70 px-2.5 py-0.5 text-[11px] text-sky-800 dark:text-sky-100 bg-sky-50/80 dark:bg-sky-900/40 hover:bg-sky-100 dark:hover:bg-sky-800/80 transition"
+                  title={`View details for ${k.name}`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-sky-500" />
+                  <span className="truncate max-w-[120px]">{k.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 7. Word cloud style emphasis */}
@@ -426,87 +485,143 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
           </div>
         </div>
 
-        {/* 8. Parallel coordinates (simplified) */}
+        {/* 8. Top underperforming KPIs (clickable list) */}
         <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            Parallel Coordinates
+            Underperforming KPIs (Gap to Target)
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            Each line is a KPI across three normalized axes: current, target, change%.
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Largest negative gaps between current value and target. Click a row to drill in.
           </p>
-          <div className="h-48">
-            <svg viewBox="0 0 220 140" className="w-full h-full">
-              <line x1={40} x2={40} y1={20} y2={120} stroke="#e5e7eb" strokeWidth={1} />
-              <line x1={110} x2={110} y1={20} y2={120} stroke="#e5e7eb" strokeWidth={1} />
-              <line x1={180} x2={180} y1={20} y2={120} stroke="#e5e7eb" strokeWidth={1} />
-              <text x={40} y={15} textAnchor="middle" className="fill-gray-400 text-[10px]">
-                Current
-              </text>
-              <text x={110} y={15} textAnchor="middle" className="fill-gray-400 text-[10px]">
-                Target
-              </text>
-              <text x={180} y={15} textAnchor="middle" className="fill-gray-400 text-[10px]">
-                Change%
-              </text>
-              {parallelKpis.map((k, idx) => {
-                const colorPalette = ['#0ea5e9', '#22c55e', '#a855f7', '#f97316', '#f43f5e'];
-                const color = colorPalette[idx % colorPalette.length];
-                const cy = (val: number, min: number, max: number) =>
-                  120 - normalize(val, min, max) * 100;
-                const y1 = cy(k.currentValue, minVal, maxVal);
-                const y2 = cy(k.targetValue, minVal, maxVal);
-                const change = k.changePercent ?? 0;
-                const y3 = cy(change, -50, 50);
-                const path = `M 40 ${y1} L 110 ${y2} L 180 ${y3}`;
-                return <path key={k.kpiId} d={path} fill="none" stroke={color} strokeWidth={1.2} opacity={0.85} />;
+          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+            {topKpis
+              .map((k) => {
+                const ratio =
+                  k.targetValue && k.targetValue !== 0
+                    ? k.currentValue / k.targetValue
+                    : 1;
+                const gapPercent = (ratio - 1) * 100;
+                return { kpi: k, ratio, gapPercent };
+              })
+              .filter(({ gapPercent }) => gapPercent < 0)
+              .sort((a, b) => a.ratio - b.ratio)
+              .slice(0, 6)
+              .map(({ kpi: k, gapPercent }) => {
+                const severity =
+                  gapPercent <= -25 ? 'severe' : gapPercent <= -10 ? 'moderate' : 'mild';
+                const barColor =
+                  severity === 'severe'
+                    ? 'bg-rose-500'
+                    : severity === 'moderate'
+                      ? 'bg-amber-500'
+                      : 'bg-emerald-500';
+                const width = Math.min(Math.abs(gapPercent), 60); // cap bar length
+                return (
+                  <button
+                    key={k.kpiId}
+                    type="button"
+                    onClick={() => navigate(`/kpis/${k.kpiId}`)}
+                    className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition text-left"
+                    title={`View details for ${k.name}`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-medium text-gray-800 dark:text-gray-100 truncate">
+                        {k.name}
+                      </p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <div className="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                          <div
+                            className={`h-full ${barColor}`}
+                            style={{ width: `${width}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                          {gapPercent.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${
+                        severity === 'severe'
+                          ? 'border-rose-500/70 text-rose-600 dark:text-rose-300'
+                          : severity === 'moderate'
+                            ? 'border-amber-500/70 text-amber-600 dark:text-amber-300'
+                            : 'border-emerald-500/70 text-emerald-600 dark:text-emerald-300'
+                      }`}
+                    >
+                      {severity === 'severe'
+                        ? 'High Risk'
+                        : severity === 'moderate'
+                          ? 'At Risk'
+                          : 'Mild'}
+                    </span>
+                  </button>
+                );
               })}
-            </svg>
+            {topKpis.filter(
+              (k) =>
+                k.targetValue &&
+                k.targetValue !== 0 &&
+                (k.currentValue / k.targetValue - 1) * 100 < 0
+            ).length === 0 && (
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                All KPIs are at or above target for this view.
+              </p>
+            )}
           </div>
         </div>
 
-        {/* 9. Status vs Trend heatmap */}
+        {/* 9. Momentum KPIs (Change % Leaders) */}
         <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            Status / Trend Matrix (Heatmap)
+            Momentum KPIs (Top Change%)
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            Distribution of KPIs across status and trend buckets.
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Biggest positive movers this period. Click a chip to drill down.
           </p>
-          <div className="grid grid-cols-4 gap-2 text-[11px]">
-            <div />
-            <div className="text-center text-gray-500 dark:text-gray-400">Up</div>
-            <div className="text-center text-gray-500 dark:text-gray-400">Stable</div>
-            <div className="text-center text-gray-500 dark:text-gray-400">Down</div>
-            {(['on_target', 'at_risk', 'below_target'] as KPI['status'][]).map((status) => {
-              const label =
-                status === 'on_target' ? 'On Target' : status === 'at_risk' ? 'At Risk' : 'Below';
-              return (
-                <React.Fragment key={status}>
-                  <div className="text-gray-500 dark:text-gray-400">{label}</div>
-                  {(['up', 'stable', 'down'] as KPI['trend'][]).map((trend) => {
-                    const count = kpis.filter((k) => k.status === status && k.trend === trend).length;
-                    const intensity = Math.min(count / (kpis.length || 1), 1);
-                    const bg =
-                      intensity === 0
-                        ? 'bg-gray-100 dark:bg-gray-800'
-                        : status === 'on_target'
-                          ? 'bg-emerald-500'
-                          : status === 'at_risk'
-                            ? 'bg-amber-500'
-                            : 'bg-rose-500';
-                    return (
-                      <div
-                        key={`${status}-${trend}`}
-                        className={`h-9 rounded-md flex items-center justify-center text-xs text-white ${bg}`}
-                        style={{ opacity: 0.25 + intensity * 0.65 }}
-                      >
-                        {count}
-                      </div>
-                    );
-                  })}
-                </React.Fragment>
-              );
-            })}
+          <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pr-1">
+            {topKpis
+              .filter((k) => typeof k.changePercent === 'number')
+              .sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0))
+              .slice(0, 10)
+              .map((k) => {
+                const change = k.changePercent ?? 0;
+                const upbeat = change > 0;
+                const magnitude = Math.min(Math.abs(change), 40);
+                const bg = upbeat
+                  ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-100'
+                  : 'bg-sky-50 text-sky-800 dark:bg-sky-900/40 dark:text-sky-100';
+                return (
+                  <button
+                    key={k.kpiId}
+                    type="button"
+                    onClick={() => navigate(`/kpis/${k.kpiId}`)}
+                    className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] ${bg} border-emerald-400/40 dark:border-emerald-500/40 hover:shadow-sm hover:-translate-y-[1px] transition`}
+                    title={`Change: ${change.toFixed(1)}%`}
+                  >
+                    <span className="truncate max-w-[140px]">{k.name}</span>
+                    <span className="flex items-center gap-0.5 whitespace-nowrap">
+                      <span
+                        className={`inline-block w-1.5 h-1.5 rounded-full ${
+                          upbeat ? 'bg-emerald-500' : 'bg-sky-500'
+                        }`}
+                      />
+                      <span>{change.toFixed(1)}%</span>
+                    </span>
+                    <span className="hidden sm:inline-block w-10 h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                      <span
+                        className={`block h-full ${upbeat ? 'bg-emerald-500' : 'bg-sky-500'}`}
+                        style={{ width: `${magnitude}%` }}
+                      />
+                    </span>
+                  </button>
+                );
+              })}
+            {topKpis.filter((k) => typeof k.changePercent === 'number').length === 0 && (
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                No change% data available for this period.
+              </p>
+            )}
           </div>
         </div>
 
