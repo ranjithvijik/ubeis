@@ -5,6 +5,8 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
+import PDFDocument from 'pdfkit';
+import ExcelJS from 'exceljs';
 
 import { ReportRepository } from '../repositories/report.repository';
 import { DashboardService } from './dashboard.service';
@@ -21,6 +23,8 @@ import { Logger } from '../utils/logger.util';
 
 const REPORTS_BUCKET = process.env.REPORTS_BUCKET || '';
 const REPORT_DOWNLOAD_EXPIRY_SECONDS = 3600; // 1 hour
+
+type BuiltReport = { body: Buffer; ext: 'csv' | 'pdf' | 'xlsx'; contentType: string };
 
 export class ReportService {
     private reportRepository: ReportRepository;
@@ -81,21 +85,19 @@ export class ReportService {
             category,
         });
 
-        const content = this.buildReportContent(request.format, request.type, dashboard, request);
-        const ext = 'csv';
-        const contentType = 'text/csv';
-        const s3Key = `reports/${user.userId}/${reportId}.${ext}`;
+        const built = await this.buildReport(request.format, request.type, dashboard, request);
+        const s3Key = `reports/${user.userId}/${reportId}.${built.ext}`;
 
         await this.s3.send(
             new PutObjectCommand({
                 Bucket: REPORTS_BUCKET,
                 Key: s3Key,
-                Body: content,
-                ContentType: contentType,
+                Body: built.body,
+                ContentType: built.contentType,
             })
         );
 
-        const fileSize = Buffer.byteLength(content, 'utf8');
+        const fileSize = built.body.byteLength;
         const report: Report = {
             reportId,
             userId: user.userId,
@@ -118,22 +120,41 @@ export class ReportService {
         return { ...report, downloadUrl: downloadUrl || undefined };
     }
 
-    private buildReportContent(
-        _format: ReportFormat,
+    private async buildReport(
+        format: ReportFormat,
         type: ReportType,
         dashboard: DashboardResponse,
         request: GenerateReportRequest
-    ): string {
-        // MVP: all formats (csv, excel, pdf) output CSV content
+    ): Promise<BuiltReport> {
+        if (format === 'csv') {
+            const csv = this.buildCsv(type, dashboard, request);
+            return { body: Buffer.from(csv, 'utf8'), ext: 'csv', contentType: 'text/csv' };
+        }
+
+        if (format === 'pdf') {
+            const body = await this.buildPdf(type, dashboard, request);
+            return { body, ext: 'pdf', contentType: 'application/pdf' };
+        }
+
+        // excel
+        const body = await this.buildXlsx(type, dashboard, request);
+        return {
+            body,
+            ext: 'xlsx',
+            contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+    }
+
+    private buildCsv(type: ReportType, dashboard: DashboardResponse, request: GenerateReportRequest): string {
         const rows: string[] = [
-            'Report,' + (request.title || type),
-            'Generated,' + new Date().toISOString(),
+            `Report,${(request.title || type)}`,
+            `Generated,${new Date().toISOString()}`,
             '',
             'Summary',
-            'Total KPIs,' + dashboard.summary.totalKPIs,
-            'On Target,' + dashboard.summary.kpisOnTarget,
-            'At Risk,' + dashboard.summary.kpisAtRisk,
-            'Below Target,' + dashboard.summary.kpisBelowTarget,
+            `Total KPIs,${dashboard.summary.totalKPIs}`,
+            `On Target,${dashboard.summary.kpisOnTarget}`,
+            `At Risk,${dashboard.summary.kpisAtRisk}`,
+            `Below Target,${dashboard.summary.kpisBelowTarget}`,
             '',
             'KPI Name,Current Value,Target Value,Unit,Status',
         ];
@@ -141,5 +162,128 @@ export class ReportService {
             rows.push([k.name, k.currentValue, k.targetValue, k.unit, k.status].map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','));
         }
         return rows.join('\n');
+    }
+
+    private buildPdf(type: ReportType, dashboard: DashboardResponse, request: GenerateReportRequest): Promise<Buffer> {
+        const title = request.title || type;
+
+        return new Promise((resolve, reject) => {
+            try {
+                const doc = new PDFDocument({ size: 'LETTER', margin: 50 });
+                const chunks: Buffer[] = [];
+
+                doc.on('data', (d) => chunks.push(Buffer.isBuffer(d) ? d : Buffer.from(d)));
+                doc.on('end', () => resolve(Buffer.concat(chunks)));
+                doc.on('error', reject);
+
+                doc.fontSize(18).text(title, { align: 'left' });
+                doc.moveDown(0.25);
+                doc.fontSize(10).fillColor('#666666').text(`Generated: ${new Date().toISOString()}`);
+                doc.moveDown(1);
+
+                doc.fillColor('#111111').fontSize(12).text('Summary');
+                doc.moveDown(0.5);
+                doc.fontSize(10).fillColor('#111111');
+                doc.text(`Total KPIs: ${dashboard.summary.totalKPIs}`);
+                doc.text(`On Target: ${dashboard.summary.kpisOnTarget}`);
+                doc.text(`At Risk: ${dashboard.summary.kpisAtRisk}`);
+                doc.text(`Below Target: ${dashboard.summary.kpisBelowTarget}`);
+                doc.moveDown(1);
+
+                doc.fillColor('#111111').fontSize(12).text('KPIs');
+                doc.moveDown(0.5);
+
+                // Simple tabular layout (no external table plugin)
+                const colX = { name: 50, current: 300, target: 390, status: 480 };
+                const startY = doc.y;
+                doc.fontSize(9).fillColor('#444444');
+                doc.text('Name', colX.name, startY);
+                doc.text('Current', colX.current, startY, { width: 80, align: 'right' });
+                doc.text('Target', colX.target, startY, { width: 80, align: 'right' });
+                doc.text('Status', colX.status, startY);
+                doc.moveDown(0.6);
+                doc.strokeColor('#DDDDDD').moveTo(50, doc.y).lineTo(560, doc.y).stroke();
+                doc.moveDown(0.4);
+
+                doc.fontSize(9).fillColor('#111111');
+                const maxRows = 40;
+                const rows = dashboard.kpis.slice(0, maxRows);
+                for (const kpi of rows) {
+                    const y = doc.y;
+                    doc.text(String(kpi.name), colX.name, y, { width: 240 });
+                    doc.text(String(kpi.currentValue), colX.current, y, { width: 80, align: 'right' });
+                    doc.text(String(kpi.targetValue), colX.target, y, { width: 80, align: 'right' });
+                    doc.text(String(kpi.status).replace(/_/g, ' '), colX.status, y);
+                    doc.moveDown(0.6);
+                    if (doc.y > 720) doc.addPage();
+                }
+
+                if (dashboard.kpis.length > maxRows) {
+                    doc.moveDown(0.5);
+                    doc.fillColor('#666666').fontSize(9).text(`Showing first ${maxRows} KPIs (of ${dashboard.kpis.length}).`);
+                }
+
+                doc.end();
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    private async buildXlsx(type: ReportType, dashboard: DashboardResponse, request: GenerateReportRequest): Promise<Buffer> {
+        const title = request.title || type;
+        const wb = new ExcelJS.Workbook();
+        wb.creator = 'UBalt EIS';
+        wb.created = new Date();
+
+        const wsSummary = wb.addWorksheet('Summary');
+        wsSummary.columns = [
+            { header: 'Field', key: 'field', width: 28 },
+            { header: 'Value', key: 'value', width: 22 },
+        ];
+        wsSummary.addRows([
+            { field: 'Report', value: title },
+            { field: 'Generated', value: new Date().toISOString() },
+            { field: 'Total KPIs', value: dashboard.summary.totalKPIs },
+            { field: 'On Target', value: dashboard.summary.kpisOnTarget },
+            { field: 'At Risk', value: dashboard.summary.kpisAtRisk },
+            { field: 'Below Target', value: dashboard.summary.kpisBelowTarget },
+        ]);
+        wsSummary.getRow(1).font = { bold: true };
+
+        const ws = wb.addWorksheet('KPIs');
+        ws.columns = [
+            { header: 'KPI Name', key: 'name', width: 48 },
+            { header: 'Category', key: 'category', width: 16 },
+            { header: 'Current Value', key: 'currentValue', width: 16 },
+            { header: 'Target Value', key: 'targetValue', width: 16 },
+            { header: 'Unit', key: 'unit', width: 14 },
+            { header: 'Status', key: 'status', width: 14 },
+            { header: 'Trend', key: 'trend', width: 12 },
+            { header: 'Change %', key: 'changePercent', width: 12 },
+            { header: 'Last Updated', key: 'lastUpdated', width: 22 },
+        ];
+        ws.getRow(1).font = { bold: true };
+
+        for (const kpi of dashboard.kpis) {
+            ws.addRow({
+                name: kpi.name,
+                category: kpi.category,
+                currentValue: kpi.currentValue,
+                targetValue: kpi.targetValue,
+                unit: kpi.unit,
+                status: String(kpi.status).replace(/_/g, ' '),
+                trend: kpi.trend,
+                changePercent: kpi.changePercent,
+                lastUpdated: kpi.lastUpdated,
+            });
+        }
+
+        // Basic styling
+        ws.views = [{ state: 'frozen', ySplit: 1 }];
+        wsSummary.views = [{ state: 'frozen', ySplit: 1 }];
+
+        const arr = (await wb.xlsx.writeBuffer()) as ArrayBuffer;
+        return Buffer.from(arr);
     }
 }

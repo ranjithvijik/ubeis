@@ -1,6 +1,7 @@
 import React from 'react';
 import { DashboardSummary } from '../components/dashboard/DashboardSummary';
 import { KPICard } from '../components/dashboard/KPICard';
+import { DashboardVisualGallery } from '../components/dashboard/DashboardVisualGallery';
 import { useDashboard } from '../hooks/useDashboard';
 import { useNavigate } from 'react-router-dom';
 
@@ -35,7 +36,10 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {data && (
-        <DashboardSummary summary={data.summary} isLoading={isLoading} />
+        <>
+          <DashboardSummary summary={data.summary} isLoading={isLoading} />
+          <DashboardVisualGallery kpis={data.kpis} summary={data.summary} />
+        </>
       )}
 
       <section className="mt-4">

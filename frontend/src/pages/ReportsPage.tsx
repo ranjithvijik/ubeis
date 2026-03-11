@@ -15,8 +15,8 @@ const REPORT_TYPES: { value: ReportType; label: string }[] = [
 
 const REPORT_FORMATS: { value: ReportFormat; label: string }[] = [
     { value: 'csv', label: 'CSV' },
-    { value: 'excel', label: 'Excel (CSV)' },
-    { value: 'pdf', label: 'PDF (CSV)' },
+    { value: 'excel', label: 'Excel (.xlsx)' },
+    { value: 'pdf', label: 'PDF (.pdf)' },
 ];
 
 const ReportsPage: React.FC = () => {

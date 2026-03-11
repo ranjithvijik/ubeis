@@ -1,5 +1,6 @@
 import React from 'react';
 import { Menu, Bell, Search, Sun, Moon, User, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { useAlerts } from '../../hooks/useAlerts';
@@ -14,6 +15,8 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     const { theme, toggleTheme } = useTheme();
     const { data: alertsData } = useAlerts({ status: 'active' });
     const [showUserMenu, setShowUserMenu] = React.useState(false);
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const navigate = useNavigate();
 
     const criticalCount = alertsData?.items.filter((a) => a.severity === 'critical').length || 0;
 
@@ -48,15 +51,25 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 </a>
             </div>
 
-    {/* Search */ }
-    <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg" >
-        <Search className="w-4 h-4 text-gray-500" />
-            <input
-              type="text"
-    placeholder = "Search KPIs, alerts..."
-    className = "bg-transparent border-none outline-none text-sm w-64 text-gray-700 dark:text-gray-200 placeholder-gray-500"
-        />
-        </div>
+            {/* Search */ }
+            <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <Search className="w-4 h-4 text-gray-500" />
+                <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            const q = searchTerm.trim();
+                            if (q) {
+                                navigate(`/kpis?search=${encodeURIComponent(q)}`);
+                            }
+                        }
+                    }}
+                    placeholder="Search KPIs, alerts..."
+                    className="bg-transparent border-none outline-none text-sm w-64 text-gray-700 dark:text-gray-200 placeholder-gray-500"
+                />
+            </div>
         </div>
 
     {/* Right side */ }
