@@ -1,5 +1,19 @@
 # App Runner backend (ubeis-backend-dev)
 
+## Connection: Frontend (CloudFront) ↔ Backend (App Runner)
+
+| Layer | Resource | URL / ID |
+|-------|----------|----------|
+| **Frontend** | CloudFront | `d2j0wdkaazlq7r.cloudfront.net` |
+| | Distribution ID | `E3NBZURCNEN74D` |
+| | ARN | `arn:aws:cloudfront::535002849180:distribution/E3NBZURCNEN74D` |
+| **Backend** | App Runner | `https://p2ecdhgpp3.us-east-1.awsapprunner.com` |
+| | Service | `ubeis-backend-dev` (Running) |
+
+The frontend is built with `VITE_API_BASE_URL=https://p2ecdhgpp3.us-east-1.awsapprunner.com`, so the app in the browser calls the App Runner API directly. CORS on the backend allows the CloudFront origin.
+
+---
+
 ## Service URL
 
 - **Base URL:** `https://p2ecdhgpp3.us-east-1.awsapprunner.com`

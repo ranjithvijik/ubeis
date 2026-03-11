@@ -5,7 +5,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18.x-green?logo=node.js)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-A serverless **Executive Information System (EIS)** designed for the University of Baltimore, providing real-time dashboards, KPI tracking, and executive alerts for university leadership. Built on AWS using Infrastructure as Code (CloudFormation) with TypeScript Lambda functions.
+A **Executive Information System (EIS)** for the University of Baltimore, providing real-time dashboards, KPI tracking, and executive alerts for university leadership. Backend runs on **AWS App Runner** (Docker/Express); frontend is hosted on **CloudFront + S3**; data and auth use **CloudFormation** (Cognito, DynamoDB, SNS).
 
 > **Why EIS over ERP?** Universities and K-12 institutions benefit from implementing an Executive Information System rather than relying solely on ERP processes. EIS provides strategic decision-making capabilities with real-time insights, while ERP focuses on operational transactions. This approach aligns with digital resource bricolage principles for educational institutions (Cui, 2021).
 
@@ -22,7 +22,7 @@ A serverless **Executive Information System (EIS)** designed for the University 
   - [2. Install Dependencies](#2-install-dependencies)
   - [3. Configure Environment](#3-configure-environment)
   - [4. Deploy Infrastructure](#4-deploy-infrastructure)
-  - [5. Deploy Lambda Functions](#5-deploy-lambda-functions)
+  - [5. Backend (App Runner) & Frontend](#5-backend-app-runner--frontend)
   - [6. Create Admin User](#6-create-admin-user)
   - [7. Seed Sample Data](#7-seed-sample-data)
 - [API Reference](#-api-reference)
@@ -35,9 +35,9 @@ A serverless **Executive Information System (EIS)** designed for the University 
 - [License](#-license)
 - [References](#-references)
 
-**Related docs:** [DEPLOYMENT_README.md](DEPLOYMENT_README.md) (dev deployment, API Gateway, S3) · [TESTING.md](TESTING.md) (unit, integration, coverage)
+**Related docs:** [scripts/README-apprunner.md](scripts/README-apprunner.md) (App Runner backend, ECR, URLs) · [TESTING.md](TESTING.md) (unit, integration, coverage)
 
-**One-command dev deploy:** `npm run deploy:dev:auto` (runs tests, build, S3 upload, CloudFormation). See [DEPLOYMENT_README.md](DEPLOYMENT_README.md).
+**One-command dev deploy:** `npm run deploy:dev:auto` (tests, CloudFormation, frontend build + S3 sync). Backend API is deployed separately via Docker + ECR + App Runner (see [scripts/README-apprunner.md](scripts/README-apprunner.md)).
 
 ---
 
@@ -74,29 +74,25 @@ A serverless **Executive Information System (EIS)** designed for the University 
 │                        UNIVERSITY OF BALTIMORE EIS                       │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────────────────┐ │
-│  │   Frontend   │────▶│ API Gateway  │────▶│    Lambda Functions      │ │
-│  │   (React)    │     │   (REST)     │     │  ┌────────────────────┐  │ │
-│  └──────────────┘     └──────────────┘     │  │ dashboard.handler  │  │ │
-│         │                    │              │  │ kpis.handler       │  │ │
-│         │                    │              │  │ alerts.handler     │  │ │
-│         ▼                    ▼              │  │ reports.handler    │  │ │
-│  ┌──────────────┐     ┌──────────────┐     │  └────────────────────┘  │ │
-│  │   Cognito    │     │  CloudWatch  │     └──────────────────────────┘ │
-│  │  User Pool   │     │  Dashboard   │                  │               │
-│  └──────────────┘     └──────────────┘                  ▼               │
-│                                            ┌──────────────────────────┐ │
-│                                            │       DynamoDB           │ │
-│                                            │    (Single-Table)        │ │
-│                                            └──────────────────────────┘ │
-│                                                         │               │
-│                              ┌───────────────┬──────────┴───────────┐  │
-│                              ▼               ▼                      ▼  │
-│                        ┌──────────┐   ┌──────────┐           ┌────────┐│
-│                        │    S3    │   │   SNS    │           │ Streams││
-│                        │ (Reports)│   │ (Alerts) │           │        ││
-│                        └──────────┘   └──────────┘           └────────┘│
-│                                                                          │
+│  ┌──────────────┐                    ┌────────────────────────────────┐ │
+│  │   Frontend   │───────────────────▶│  App Runner (Express API)      │ │
+│  │   (React)    │  HTTPS + CORS      │  /dashboard, /kpis, /alerts    │ │
+│  │ CloudFront   │                    │  Image: ECR (Docker)            │ │
+│  │   + S3       │                    └────────────────────────────────┘ │
+│  └──────────────┘                                    │                  │
+│         │                                             ▼                  │
+│         │                                    ┌──────────────────────────┐│
+│  ┌──────┴──────┐                             │       DynamoDB           ││
+│  │   Cognito   │                             │    (Single-Table)        ││
+│  │  User Pool  │                             └──────────────────────────┘│
+│  └─────────────┘                                        │                │
+│                                 ┌───────────────────────┼───────────────┐│
+│                                 ▼                       ▼                │
+│                          ┌──────────┐            ┌──────────┐           │
+│                          │ S3       │            │   SNS    │           │
+│                          │(Frontend,│            │ (Alerts) │           │
+│                          │ Reports) │            └──────────┘           │
+│                          └──────────┘                                    │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -104,15 +100,15 @@ A serverless **Executive Information System (EIS)** designed for the University 
 
 | Service | Purpose | Estimated Cost (Dev) |
 |---------|---------|---------------------|
-| **API Gateway** | REST API endpoints | ~$3.50/million requests |
-| **Lambda** | Serverless compute | ~$0.20/million invocations |
+| **App Runner** | Backend API (container) | ~$0.064/vCPU-hr + $0.007/GB-hr |
+| **ECR** | Docker image registry | ~$0.10/GB/month |
+| **CloudFront** | Frontend CDN | ~$0.085/GB + requests |
+| **S3** | Frontend static + reports | ~$0.023/GB |
 | **DynamoDB** | NoSQL database | ~$1.25/million writes |
 | **Cognito** | Authentication | Free tier (50K MAU) |
-| **S3** | Report storage | ~$0.023/GB |
 | **SNS** | Alert notifications | ~$0.50/million publishes |
-| **CloudWatch** | Monitoring & logs | ~$0.30/GB ingested |
 
-**Estimated Monthly Cost (Dev):** $10-25/month
+**Live URLs (dev):** Frontend: `https://d2j0wdkaazlq7r.cloudfront.net` · API: `https://p2ecdhgpp3.us-east-1.awsapprunner.com`
 
 ---
 
@@ -133,7 +129,7 @@ Before you begin, ensure you have the following installed:
 
 - [ ] AWS Account with administrative access
 - [ ] AWS CLI configured with credentials
-- [ ] IAM permissions for CloudFormation, Lambda, DynamoDB, S3, Cognito, API Gateway, SNS, CloudWatch
+- [ ] IAM permissions for CloudFormation, App Runner, ECR, DynamoDB, S3, Cognito, SNS
 
 ### Verify Installation
 
@@ -176,8 +172,10 @@ cd frontend && npm install && cd ..
 npm test
 npm run test:integration
 
-# 5. Deploy to dev (automated: install, test, package, S3 upload, CloudFormation)
+# 5. Deploy infra + frontend (install, test, CloudFormation, frontend build + S3 sync)
 npm run deploy:dev:auto
+
+# Backend: build Docker image, push to ECR, deploy App Runner (see scripts/README-apprunner.md)
 
 # 6. Create admin user
 npm run create-admin
@@ -189,7 +187,7 @@ npm run seed-data
 aws cloudformation describe-stacks --stack-name eis-dev --query 'Stacks[0].Outputs'
 ```
 
-For detailed first-time deployment (S3 bucket, Lambda zip upload, API Gateway setup), see **[DEPLOYMENT_README.md](DEPLOYMENT_README.md)**.
+For backend (Docker, ECR, App Runner) see **[scripts/README-apprunner.md](scripts/README-apprunner.md)**.
 
 ---
 
@@ -286,9 +284,11 @@ BUDGET_UTILIZATION_HIGH=0.95
 # ============================================
 # Optional: Frontend Configuration
 # ============================================
-REACT_APP_API_URL=https://xxxxxx.execute-api.us-east-1.amazonaws.com/dev
-REACT_APP_USER_POOL_ID=us-east-1_xxxxxxxxx
-REACT_APP_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
+# Frontend (Vite) - set in frontend/.env.production for build
+VITE_API_BASE_URL=https://p2ecdhgpp3.us-east-1.awsapprunner.com
+VITE_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
+VITE_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
+VITE_AWS_REGION=us-east-1
 ```
 
 #### Configure AWS CLI Profile (Optional)
@@ -305,14 +305,18 @@ AWS_PROFILE=uob-eis-profile
 
 ### 4. Deploy Infrastructure
 
-#### Option A: Deploy All at Once (Recommended)
+#### Option A: Deploy Infra + Frontend (Recommended)
 
 ```bash
-# Build, package Lambdas, and deploy CloudFormation stack (dev)
-npm run deploy:dev
+# Run tests, deploy CloudFormation (Cognito, DynamoDB, S3, SNS), build and sync frontend
+npm run deploy:dev:auto
 ```
 
-This runs `npm run package` (TypeScript build + Lambda zip creation) then deploys the stack. For first-time setup (S3 bucket creation, uploading Lambda zips), see **[DEPLOYMENT_README.md](DEPLOYMENT_README.md)**.
+Or deploy only CloudFormation:
+
+```bash
+npm run deploy:dev
+```
 
 #### Option B: Deploy Step by Step
 
@@ -321,17 +325,14 @@ This runs `npm run package` (TypeScript build + Lambda zip creation) then deploy
 aws cloudformation validate-template \
   --template-body file://infrastructure/main.yaml
 
-# Build and package Lambdas
-npm run package
-
-# Upload Lambda zips to S3 (see DEPLOYMENT_README.md for bucket name)
-# Then deploy the stack
+# Deploy the stack (no Lambda; backend is App Runner)
 aws cloudformation deploy \
   --template-file infrastructure/main.yaml \
   --stack-name eis-dev \
   --parameter-overrides \
       Environment=dev \
       UniversityName=UniversityOfBaltimore \
+      DeploymentsBucketSuffix=universityofbaltimore \
   --capabilities CAPABILITY_NAMED_IAM
 
 # Wait for completion
@@ -355,22 +356,22 @@ aws cloudformation describe-stacks \
   --query 'Stacks[0].Outputs'
 ```
 
-### 5. Deploy Lambda Functions
+### 5. Backend (App Runner) & Frontend
 
-Lambda code is packaged and deployed as part of `npm run deploy:dev`. To update only Lambda code after infrastructure exists:
-
-#### Build and Package
+The **backend API** runs on AWS App Runner (Express in Docker). To deploy or update it:
 
 ```bash
-# Compile TypeScript and create Lambda zip files
-npm run package
-
-# Output: dist/ (compiled JS), dist/lambdas/*.zip (per-function zips)
+# From repo root: build image, push to ECR, trigger App Runner deployment
+docker build -t ubeis-backend-dev .
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 535002849180.dkr.ecr.us-east-1.amazonaws.com
+docker tag ubeis-backend-dev:latest 535002849180.dkr.ecr.us-east-1.amazonaws.com/ubeis-backend-dev:latest
+docker push 535002849180.dkr.ecr.us-east-1.amazonaws.com/ubeis-backend-dev:latest
+aws apprunner start-deployment --service-arn "arn:aws:apprunner:us-east-1:535002849180:service/ubeis-backend-dev/65858ca4f20c4774ba2e8479204431ad" --region us-east-1
 ```
 
-#### Upload Zips to S3 and Update Stack
+**Frontend** is built with `VITE_API_BASE_URL=https://p2ecdhgpp3.us-east-1.awsapprunner.com`. After `npm run deploy:dev:auto`, sync `frontend/dist/` to the S3 bucket that backs your CloudFront distribution (see stack output `FrontendBucket`).
 
-Upload the contents of `dist/lambdas/` to your deployment S3 bucket, then redeploy or update the stack so Lambda functions use the new code. See **[DEPLOYMENT_README.md](DEPLOYMENT_README.md)** for bucket naming and upload commands.
+Full details: **[scripts/README-apprunner.md](scripts/README-apprunner.md)**.
 
 ### 6. Create Admin User
 
@@ -419,10 +420,10 @@ aws dynamodb scan \
 
 ## 📡 API Reference
 
-### Base URL
+### Base URL (dev)
 
 ```
-https://{api-id}.execute-api.{region}.amazonaws.com/{stage}
+https://p2ecdhgpp3.us-east-1.awsapprunner.com
 ```
 
 ### Authentication
@@ -578,14 +579,13 @@ npm run test:e2e # Playwright E2E (requires app or CI setup)
 
 ### Deploy to S3/CloudFront
 
-```bash
-# Sync Vite build output to S3
-aws s3 sync frontend/dist/ s3://your-frontend-bucket/ --delete
+After building, sync to the bucket that backs your CloudFront distribution (e.g. from stack output `FrontendBucket`):
 
-# Invalidate CloudFront cache (if using)
-aws cloudfront create-invalidation \
-  --distribution-id XXXXXXXXXXXXX \
-  --paths "/*"
+```bash
+aws s3 sync frontend/dist/ s3://535002849180-universityofbaltimore-eis-frontend-dev/ --delete --region us-east-1
+
+# Invalidate CloudFront cache
+aws cloudfront create-invalidation --distribution-id E3NBZURCNEN74D --paths "/*"
 ```
 
 ---
@@ -610,19 +610,16 @@ npm run test:integration
 ### Test Individual Components
 
 ```bash
-# Test handlers
-npm test -- --testPathPattern=handlers
-
 # Test services
 npm test -- --testPathPattern=services
 
 # Test specific file
-npm test -- dashboard.handler.test.ts
+npm test -- kpi.service.test.ts
 ```
 
 ### Coverage
 
-Coverage thresholds are set in `jest.config.js`. Current suite includes dashboard handler and KPI service tests; add more tests and raise thresholds as needed.
+Coverage thresholds are set in `jest.config.js`. Current suite includes KPI service tests; add more tests and raise thresholds as needed.
 
 ---
 
@@ -647,7 +644,7 @@ npm run deploy:staging
 npm run deploy:prod
 ```
 
-Each command builds and packages Lambdas, then deploys the CloudFormation stack. For first-time dev deployment (S3 bucket, Lambda zip upload, API Gateway), see **[DEPLOYMENT_README.md](DEPLOYMENT_README.md)**.
+Each command deploys the CloudFormation stack (Cognito, DynamoDB, S3, SNS). Backend is deployed via Docker + ECR + App Runner; see **[scripts/README-apprunner.md](scripts/README-apprunner.md)**.
 
 ---
 
@@ -668,13 +665,16 @@ aws cloudformation delete-stack --stack-name eis-dev
 aws cloudformation wait stack-delete-complete --stack-name eis-dev
 ```
 
-#### 2. Lambda Function Timeout
+#### 2. App Runner / API Errors
 
 ```bash
-# Increase timeout in CloudFormation or via CLI (function names from your stack)
-aws lambda update-function-configuration \
-  --function-name <DashboardFunctionName> \
-  --timeout 60
+# Check backend health
+curl https://p2ecdhgpp3.us-east-1.awsapprunner.com/health
+
+# View App Runner service status
+aws apprunner describe-service \
+  --service-arn "arn:aws:apprunner:us-east-1:535002849180:service/ubeis-backend-dev/65858ca4f20c4774ba2e8479204431ad" \
+  --region us-east-1 --query 'Service.Status'
 ```
 
 #### 3. Cognito Authentication Errors
@@ -697,16 +697,13 @@ aws cognito-idp admin-set-user-password \
 
 #### 4. DynamoDB Access Denied
 
-Ensure the Lambda execution role has DynamoDB permissions. Role names are defined in the CloudFormation template (`infrastructure/main.yaml`).
+Ensure the App Runner instance role (`ubeis-apprunner-instance-role`) has DynamoDB and SNS permissions. Policy is in `scripts/apprunner-instance-policy.json`.
 
 ### Get Help
 
 ```bash
-# View Lambda logs (replace with your function name from stack outputs)
-aws logs tail /aws/lambda/<YourDashboardFunctionName> --follow
-
-# Check API Gateway logs
-aws logs tail API-Gateway-Execution-Logs_{api-id}/dev --follow
+# App Runner logs (service name from scripts/README-apprunner.md)
+aws logs tail /aws/apprunner/ubeis-backend-dev/65858ca4f20c4774ba2e8479204431ad/application --follow --region us-east-1
 ```
 
 ---
