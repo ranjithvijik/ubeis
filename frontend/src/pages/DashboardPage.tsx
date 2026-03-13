@@ -72,7 +72,7 @@ const DashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {data && (
         <>
           <DashboardSummary summary={data.summary} isLoading={isLoading} />
@@ -81,11 +81,11 @@ const DashboardPage: React.FC = () => {
       )}
 
       <section className="mt-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3">
           Key Performance Indicators
         </h2>
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"
           initial="hidden"
           animate="visible"
           variants={{

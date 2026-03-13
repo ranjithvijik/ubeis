@@ -27,6 +27,11 @@ const baseNavItems = [
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     const location = useLocation();
+    const closeOnNavigate = () => {
+        if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
+            onToggle();
+        }
+    };
     const navItems =
         location.pathname.startsWith('/admin')
             ? [...baseNavItems, { path: '/admin/users', label: 'Admin Users', icon: Shield }]
@@ -34,12 +39,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
 
     return (
         <aside
-      className= {
-            clsx(
-        'fixed left-0 top-0 h-full text-white transition-all duration-300 z-50 bg-gradient-to-b from-sky-900 via-sky-800 to-sky-950 shadow-2xl/40 shadow-black/40 backdrop-blur-md border-r border-sky-800/70',
-                isOpen? 'w-64' : 'w-20'
-            )
-        }
+            className={clsx(
+                'fixed left-0 top-0 h-full text-white transition-all duration-300 z-50 bg-gradient-to-b from-sky-900 via-sky-800 to-sky-950 shadow-2xl/40 shadow-black/40 backdrop-blur-md border-r border-sky-800/70',
+                'w-64',
+                isOpen ? 'translate-x-0' : '-translate-x-full',
+                'md:translate-x-0',
+                isOpen ? 'md:w-64' : 'md:w-20'
+            )}
         >
         {/* Logo */ }
         < div className = "flex items-center justify-between h-16 px-4 border-b border-sky-800/70 bg-sky-950/40 backdrop-blur" >
@@ -63,10 +69,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
                     </div>
           )}
 </div>
-    < button
-onClick = { onToggle }
-className = "p-1.5 hover:bg-sky-800/70 rounded-lg border border-sky-700/70 transition-colors"
-    >
+            <button
+                type="button"
+                onClick={onToggle}
+                aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 hover:bg-sky-800/70 rounded-lg border border-sky-700/70 transition-colors touch-manipulation"
+            >
     <ChevronLeft
             className={
     clsx(
@@ -79,37 +87,34 @@ className = "p-1.5 hover:bg-sky-800/70 rounded-lg border border-sky-700/70 trans
     </div>
 
 {/* Navigation */ }
-<nav className="p-3 space-y-1" >
-{
-    navItems.map((item) => {
-        const Icon = item.icon;
-        const isActive = location.pathname.startsWith(item.path);
+        <nav className="p-3 space-y-1">
+            {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname.startsWith(item.path);
 
-        return (
-            <NavLink
-              key= { item.path }
-        to = { item.path }
-        className = {
-            clsx(
-                'group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative overflow-hidden',
-                isActive
-                    ? 'bg-sky-100 text-sky-900 shadow-sm shadow-sky-900/40'
-                  : 'text-sky-100/80 hover:bg-sky-900/70 hover:text-white'
-            )
-        }
-            >
-            { isActive && (
-                <span className="absolute left-0 top-0 h-full w-0.5 bg-sky-400" />
-            )}
-            <Icon className="w-5 h-5 flex-shrink-0" />
-                { isOpen && (
-                    <span className="font-medium text-sm tracking-wide" > { item.label } </span>
-              )
-}
-    </NavLink>
-          );
-        })}
-</nav>
+                return (
+                    <NavLink
+                        key={item.path}
+                        to={item.path}
+                        onClick={closeOnNavigate}
+                        className={clsx(
+                            'group flex items-center gap-3 px-3 py-3 min-h-[44px] rounded-lg transition-colors relative overflow-hidden touch-manipulation',
+                            isActive
+                                ? 'bg-sky-100 text-sky-900 shadow-sm shadow-sky-900/40'
+                                : 'text-sky-100/80 hover:bg-sky-900/70 hover:text-white active:bg-sky-800/80'
+                        )}
+                    >
+                        {isActive && (
+                            <span className="absolute left-0 top-0 h-full w-0.5 bg-sky-400" />
+                        )}
+                        <Icon className="w-5 h-5 flex-shrink-0" aria-hidden />
+                        {isOpen && (
+                            <span className="font-medium text-sm tracking-wide">{item.label}</span>
+                        )}
+                    </NavLink>
+                );
+            })}
+        </nav>
 
 {/* Footer */ }
 {

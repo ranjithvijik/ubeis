@@ -2,6 +2,7 @@ import React from 'react';
 import { Bell, Moon, Sun, User as UserIcon } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { safeGetItem, safeSetItem } from '../utils/storage';
 
 type NotificationPrefs = {
   alertsCritical: boolean;
@@ -21,7 +22,7 @@ const STORAGE_KEY = 'settings:notifications:v1';
 
 const readPrefs = (): NotificationPrefs => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeGetItem(STORAGE_KEY);
     if (!raw) return DEFAULT_PREFS;
     const parsed = JSON.parse(raw) as Partial<NotificationPrefs>;
     return {
@@ -36,7 +37,7 @@ const readPrefs = (): NotificationPrefs => {
 };
 
 const writePrefs = (prefs: NotificationPrefs) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  safeSetItem(STORAGE_KEY, JSON.stringify(prefs));
 };
 
 const SettingsPage: React.FC = () => {

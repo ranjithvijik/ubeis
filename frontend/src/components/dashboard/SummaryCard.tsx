@@ -62,20 +62,20 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
   }
 
 return (
-    <div className= "bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow" >
-    <div className="flex items-center justify-between mb-2" >
-        <span className="text-sm font-medium text-gray-500 dark:text-gray-400" >
-            { title }
-            </span>
+    <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between mb-1 sm:mb-2 gap-2">
+        <span className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 truncate min-w-0">
+            {title}
+        </span>
             < div className = { clsx('p-2 rounded-lg', colors.bg) } >
                 <Icon className={ clsx('w-4 h-4', colors.icon) } />
                     </div>
                     </div>
 
-                    < div className = "flex items-baseline gap-2" >
-                        <span className="text-2xl font-bold text-gray-900 dark:text-white" >
-                            { value.toLocaleString() }
-                            </span>
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                            {value.toLocaleString()}
+                        </span>
 {
     percentage !== undefined && (
         <span className={ clsx('text-sm font-medium', colors.text) }>

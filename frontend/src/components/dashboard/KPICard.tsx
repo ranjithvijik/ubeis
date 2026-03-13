@@ -138,32 +138,40 @@ export const KPICard: React.FC<KPICardProps> = ({ kpi, onClick, metrics }) => {
 
     return (
         <motion.div
+            role="button"
+            tabIndex={0}
             whileHover={{ y: -4, scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
             transition={{ type: 'spring', stiffness: 260, damping: 20 }}
             onClick={onClick}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onClick?.();
+                }
+            }}
             className={clsx(
                 'relative overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-700/70',
                 'bg-gradient-to-br from-white/95 via-sky-50/70 to-white/90 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-950',
                 'backdrop-blur shadow-sm hover:shadow-xl hover:shadow-sky-900/20 transition-all duration-200 cursor-pointer',
-                'ring-1',
+                'ring-1 touch-manipulation min-h-[120px]',
                 colors.ring
             )}
         >
             {/* accent wash */}
             <div className={clsx('pointer-events-none absolute inset-0 bg-gradient-to-br', colors.accent)} />
 
-            <div className="relative p-5">
+            <div className="relative p-4 sm:p-5">
                 {/* Header */}
-                <div className="flex items-start justify-between gap-3 mb-4">
-                    <div className="min-w-0">
-                        <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                <div className="flex items-start justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-gray-900 dark:text-white truncate text-sm sm:text-base">
                             {kpi.name}
                         </h3>
-                        <div className="mt-0.5 flex items-center gap-2">
+                        <div className="mt-0.5 flex items-center gap-2 flex-wrap">
                             <span
                                 className={clsx(
-                                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize',
+                                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize flex-shrink-0',
                                     categoryToken.pillClass
                                 )}
                             >
@@ -171,7 +179,7 @@ export const KPICard: React.FC<KPICardProps> = ({ kpi, onClick, metrics }) => {
                                 {categoryToken.label}
                             </span>
                             {spark && (
-                                <svg width="96" height="28" viewBox="0 0 96 28" className="opacity-80">
+                                <svg width="96" height="28" viewBox="0 0 96 28" className="opacity-80 w-14 sm:w-24 flex-shrink-0" aria-hidden>
                                     <path
                                         d={spark}
                                         fill="none"
@@ -188,15 +196,15 @@ export const KPICard: React.FC<KPICardProps> = ({ kpi, onClick, metrics }) => {
                         </div>
                     </div>
 
-                    <span className={clsx('px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap', colors.badge)}>
+                    <span className={clsx('px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0', colors.badge)}>
                         {statusLabels[kpi.status]}
                     </span>
                 </div>
 
                 {/* Value + delta */}
-                <div className="flex items-end justify-between gap-3 mb-4">
+                <div className="flex items-end justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
                     <div className="min-w-0">
-                        <div className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+                        <div className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
                             {formatValue(kpi.currentValue, kpi.unit)}
                         </div>
                         <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -229,7 +237,7 @@ export const KPICard: React.FC<KPICardProps> = ({ kpi, onClick, metrics }) => {
                 </div>
 
                 {/* Derived metrics: rank, contribution, YoY */}
-                <div className="mb-4 flex flex-wrap gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                <div className="mb-3 sm:mb-4 flex flex-wrap gap-1.5 sm:gap-2 text-[11px] text-gray-500 dark:text-gray-400">
                     {metrics?.rankInCategory != null && metrics.categorySize != null && (
                         <span className="px-2 py-0.5 rounded-full bg-gray-100/80 dark:bg-gray-800/70">
                             Rank #{metrics.rankInCategory} of {metrics.categorySize} in {kpi.category}
@@ -258,11 +266,11 @@ export const KPICard: React.FC<KPICardProps> = ({ kpi, onClick, metrics }) => {
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                    <span>Updated {new Date(kpi.lastUpdated).toLocaleDateString()}</span>
+                <div className="flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <span className="truncate">Updated {new Date(kpi.lastUpdated).toLocaleDateString()}</span>
                     <Link
                         to={`/kpis/${kpi.kpiId}`}
-                        className="flex items-center gap-1 font-medium text-primary-500 hover:text-primary-600"
+                        className="flex items-center gap-1 font-medium text-primary-500 hover:text-primary-600 min-h-[44px] items-center justify-end py-1 touch-manipulation flex-shrink-0"
                         onClick={(e) => e.stopPropagation()}
                     >
                         View details <ArrowRight className="w-3.5 h-3.5" />

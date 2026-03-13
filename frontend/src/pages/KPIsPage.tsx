@@ -47,8 +47,8 @@ const KPIsPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+    <div className="space-y-3 sm:space-y-4">
+      <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
         All KPIs
       </h1>
       {(search || statusParam) && (
@@ -74,7 +74,7 @@ const KPIsPage: React.FC = () => {
           {' '}({filteredKpis.length} KPI{filteredKpis.length === 1 ? '' : 's'}).
         </p>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
         {filteredKpis.map((kpi) => (
           <KPICard
             key={kpi.kpiId}

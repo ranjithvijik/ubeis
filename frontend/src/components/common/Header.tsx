@@ -1,24 +1,34 @@
 import React from 'react';
-import { Menu, Bell, Search, Sun, Moon, User, LogOut } from 'lucide-react';
+import { Menu, Bell, Search, Sun, Moon, User, LogOut, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { useAlerts } from '../../hooks/useAlerts';
 import ubaltLogo from '../../assets/ubalt-logo.svg';
+import type { Alert } from '../../types';
 
 interface HeaderProps {
     onMenuClick: () => void;
 }
 
+const severityStyles: Record<Alert['severity'], string> = {
+    critical: 'border-red-500 bg-red-50 dark:bg-red-900/20',
+    warning: 'border-amber-500 bg-amber-50 dark:bg-amber-900/20',
+    info: 'border-sky-500 bg-sky-50 dark:bg-sky-900/20',
+};
+
 export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     const { user, logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
-    const { data: alertsData } = useAlerts({ status: 'active' });
+    const { data: alertsData, isLoading: alertsLoading } = useAlerts({ status: 'active' });
     const [showUserMenu, setShowUserMenu] = React.useState(false);
+    const [showAlertsPanel, setShowAlertsPanel] = React.useState(false);
     const [searchTerm, setSearchTerm] = React.useState('');
     const navigate = useNavigate();
 
-    const criticalCount = alertsData?.items.filter((a) => a.severity === 'critical').length || 0;
+    const alerts = alertsData?.items ?? [];
+    const criticalCount = alerts.filter((a) => a.severity === 'critical').length;
+    const displayAlerts = alerts.slice(0, 8);
 
     return (
         <header className= "sticky top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" >
@@ -26,11 +36,13 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             {/* Left side */ }
             < div className = "flex items-center gap-4" >
                 <button
-            onClick={ onMenuClick }
-    className = "p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-        >
-        <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-            </button>
+                    type="button"
+                    onClick={onMenuClick}
+                    aria-label="Open menu"
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
+                >
+                    <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                </button>
 
             {/* Brand */ }
             <div className="hidden sm:flex items-center gap-3">
@@ -74,10 +86,12 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
     {/* Right side */ }
     <div className="flex items-center gap-3" >
-        {/* Theme toggle */ }
-        < button
-    onClick = { toggleTheme }
-    className = "p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                {/* Theme toggle */}
+        <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
         >
         { theme === 'dark' ? (
             <Sun className= "w-5 h-5 text-gray-600 dark:text-gray-300" />
@@ -86,22 +100,108 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             )}
 </button>
 
-{/* Notifications */ }
-<button className="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" >
-    <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-        { criticalCount > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center" >
-                { criticalCount }
-                </span>
-            )}
-</button>
+        {/* Alerts / Notifications */}
+        <div className="relative">
+            <button
+                type="button"
+                onClick={() => {
+                    setShowUserMenu(false);
+                    setShowAlertsPanel((prev) => !prev);
+                }}
+                aria-label="View alerts"
+                aria-expanded={showAlertsPanel}
+                className="relative min-w-[44px] min-h-[44px] flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
+            >
+                <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                {criticalCount > 0 && (
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                        {criticalCount}
+                    </span>
+                )}
+            </button>
 
-{/* User menu */ }
-<div className="relative" >
-    <button
-              onClick={ () => setShowUserMenu(!showUserMenu) }
-className = "flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-    >
+            {showAlertsPanel && (
+                <>
+                    <div
+                        role="presentation"
+                        className="fixed inset-0 z-10"
+                        onClick={() => setShowAlertsPanel(false)}
+                        aria-hidden
+                    />
+                    <div className="absolute right-0 mt-2 w-[min(360px,calc(100vw-2rem))] max-h-[min(400px,70vh)] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 flex flex-col">
+                        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Alerts</h3>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {alerts.length} active
+                            </span>
+                        </div>
+                        <div className="overflow-y-auto flex-1 overscroll-contain">
+                            {alertsLoading ? (
+                                <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                                    Loading alerts…
+                                </div>
+                            ) : displayAlerts.length === 0 ? (
+                                <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                                    No active alerts
+                                </div>
+                            ) : (
+                                <ul className="py-1">
+                                    {displayAlerts.map((alert) => (
+                                        <li key={alert.alertId}>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowAlertsPanel(false);
+                                                    navigate(`/alerts`);
+                                                }}
+                                                className={`w-full text-left px-4 py-2.5 border-l-2 ${severityStyles[alert.severity]} hover:opacity-90 transition`}
+                                            >
+                                                <div className="flex items-start gap-2">
+                                                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-gray-500 dark:text-gray-400" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                                                            {alert.kpiName}
+                                                        </p>
+                                                        <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2 mt-0.5">
+                                                            {alert.message}
+                                                        </p>
+                                                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                                                            {new Date(alert.createdAt).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                        <div className="border-t border-gray-200 dark:border-gray-700 p-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowAlertsPanel(false);
+                                    navigate('/alerts');
+                                }}
+                                className="w-full py-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
+                            >
+                                View all alerts
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
+        </div>
+
+        {/* User menu */}
+        <div className="relative">
+            <button
+                type="button"
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                aria-label="User menu"
+                aria-expanded={showUserMenu}
+                className="flex items-center gap-2 min-h-[44px] py-2 px-2 pr-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
+            >
     <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center" >
         <span className="text-white text-sm font-medium" >
             { user?.firstName?.[0]}{ user?.lastName?.[0] }
@@ -117,32 +217,40 @@ className = "flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-70
         </div>
         </button>
 
-{/* Dropdown */ }
-{
-    showUserMenu && (
-        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1" >
-            <button
-              onClick={() => {
-                setShowUserMenu(false);
-                navigate('/settings');
-              }}
-              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-        <User className="w-4 h-4" />
-            Profile
-            </button>
-            < hr className = "my-1 border-gray-200 dark:border-gray-700" />
-                <button
-                  onClick={ logout }
-    className = "flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-        >
-        <LogOut className="w-4 h-4" />
-            Sign Out
-                </button>
-                </div>
-            )
-}
-</div>
+            {/* Dropdown */}
+            {showUserMenu && (
+                <>
+                    <div
+                        role="presentation"
+                        className="fixed inset-0 z-10"
+                        onClick={() => setShowUserMenu(false)}
+                        aria-hidden
+                    />
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowUserMenu(false);
+                                navigate('/settings');
+                            }}
+                            className="flex items-center gap-2 w-full px-4 py-3 min-h-[44px] text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 touch-manipulation"
+                        >
+                            <User className="w-4 h-4 flex-shrink-0" />
+                            Profile
+                        </button>
+                        <hr className="my-1 border-gray-200 dark:border-gray-700" />
+                        <button
+                            type="button"
+                            onClick={logout}
+                            className="flex items-center gap-2 w-full px-4 py-3 min-h-[44px] text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 touch-manipulation"
+                        >
+                            <LogOut className="w-4 h-4 flex-shrink-0" />
+                            Sign Out
+                        </button>
+                    </div>
+                </>
+            )}
+        </div>
     </div>
     </div>
     </header>

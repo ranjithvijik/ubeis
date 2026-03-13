@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
+import { safeGetItem, safeSetItem } from '../utils/storage';
 
 type Theme = 'light' | 'dark';
 
@@ -10,28 +11,36 @@ export interface ThemeContextType {
 
 export const ThemeContext = createContext<ThemeContextType | null>(null);
 
+function getSystemTheme(): Theme {
+    if (typeof window === 'undefined' || !window.matchMedia) return 'light';
+    try {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    } catch {
+        return 'light';
+    }
+}
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [theme, setThemeState] = useState<Theme>(() => {
-        const stored = localStorage.getItem('theme');
+        const stored = safeGetItem('theme');
         if (stored === 'light' || stored === 'dark') {
             return stored;
         }
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        return getSystemTheme();
     });
 
     useEffect(() => {
-        // Apply the theme to the DOM
-        localStorage.setItem('theme', theme);
+        safeSetItem('theme', theme);
         document.documentElement.classList.toggle('dark', theme === 'dark');
     }, [theme]);
 
-    // FIX: Actively listen for OS-level theme changes
+    // Listen for OS-level theme changes (cross-browser)
     useEffect(() => {
+        if (typeof window === 'undefined' || !window.matchMedia) return;
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
         const handleChange = (e: MediaQueryListEvent) => {
-            // Only auto-switch if the user hasn't manually forced a preference
-            const storedTheme = localStorage.getItem('theme');
+            const storedTheme = safeGetItem('theme');
             if (!storedTheme) {
                 setThemeState(e.matches ? 'dark' : 'light');
             }

@@ -31,12 +31,12 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
   const navigate = useNavigate();
 
   return (
-    <section className="space-y-4 relative overflow-hidden rounded-2xl border border-sky-900/10 bg-slate-950/90 bg-[radial-gradient(circle_at_top,_#0ea5e95c,_transparent_55%),radial-gradient(circle_at_bottom,_#3b82f67a,_transparent_55%)] dark:bg-slate-950/95 p-5">
+    <section className="space-y-4 relative overflow-hidden rounded-xl sm:rounded-2xl border border-sky-900/10 bg-slate-950/90 bg-[radial-gradient(circle_at_top,_#0ea5e95c,_transparent_55%),radial-gradient(circle_at_bottom,_#3b82f67a,_transparent_55%)] dark:bg-slate-950/95 p-4 sm:p-5">
       <div className="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,rgba(148,163,184,0.14)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.14)_1px,transparent_1px)] [background-size:80px_80px] opacity-70" />
 
-      <div className="relative grid gap-4 xl:grid-cols-3 lg:grid-cols-2 grid-cols-1">
+      <div className="relative grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
         {/* 1. Dial / Gauge for overall health */}
-        <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4 flex flex-col">
+        <div className="rounded-xl sm:rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-3 sm:p-4 flex flex-col min-h-[200px] sm:min-h-0">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
             Overall KPI Health (Gauge)
           </h3>
@@ -97,7 +97,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
         </div>
 
         {/* 2. Enrollment vs Financial comparison (clickable bars) */}
-        <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4">
+        <div className="rounded-xl sm:rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-3 sm:p-4">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
             Enrollment vs Financial Focus
           </h3>
@@ -118,8 +118,8 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
                   key={b.label}
                   type="button"
                   onClick={() => !disabled && navigate(`/kpis?search=${encodeURIComponent(b.search)}`)}
-                  className={`flex flex-col items-center justify-end h-full group focus:outline-none ${
-                    disabled ? 'opacity-40 cursor-default' : 'cursor-pointer'
+                  className={`flex flex-col items-center justify-end h-full min-h-[44px] group focus:outline-none touch-manipulation ${
+                    disabled ? 'opacity-40 cursor-default' : 'cursor-pointer active:opacity-90'
                   }`}
                   title={
                     disabled
@@ -144,7 +144,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
         </div>
 
         {/* 3. KPI status composition (drillable bar) */}
-        <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4 flex flex-col">
+        <div className="rounded-xl sm:rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-3 sm:p-4 flex flex-col">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
             KPI Status Composition
           </h3>
@@ -197,7 +197,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
                         onClick={() =>
                           navigate(`/kpis?status=${encodeURIComponent(seg.key)}`)
                         }
-                        className={`h-full flex-1 ${seg.color} hover:brightness-110 transition`}
+                        className={`h-full min-h-[24px] flex-1 ${seg.color} hover:brightness-110 transition touch-manipulation`}
                         style={{ width: `${pct}%` }}
                         title={`${seg.label}: ${seg.count} KPI${seg.count === 1 ? '' : 's'}`}
                       />
@@ -212,7 +212,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
                       onClick={() =>
                         navigate(`/kpis?status=${encodeURIComponent(seg.key)}`)
                       }
-                      className="flex flex-col items-start gap-0.5 rounded-lg px-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-800/70 transition text-left"
+                      className="flex flex-col items-start gap-0.5 rounded-lg px-2 py-2 min-h-[44px] justify-center hover:bg-gray-50 dark:hover:bg-gray-800/70 transition text-left touch-manipulation"
                     >
                       <span className="inline-flex items-center gap-1 text-gray-800 dark:text-gray-100">
                         <span className={`w-2 h-2 rounded-full ${seg.color}`} />
@@ -231,7 +231,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
 
         {/* 4. Area chart for a single KPI's history */}
         <div
-          className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4 cursor-pointer hover:shadow-md transition-shadow"
+          className="rounded-xl sm:rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-3 sm:p-4 cursor-pointer hover:shadow-md transition-shadow touch-manipulation min-h-[180px] sm:min-h-[200px]"
           onClick={() => {
             if (firstWithHistory) {
               navigate(`/kpis/${firstWithHistory.kpiId}`);
@@ -273,7 +273,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
             <button
               type="button"
               onClick={() => navigate(`/kpis/${firstWithHistory.kpiId}`)}
-              className="mt-2 text-[11px] text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 truncate text-left"
+              className="mt-2 min-h-[44px] py-2 text-[11px] text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 truncate text-left w-full touch-manipulation"
               title={firstWithHistory.name}
             >
               {firstWithHistory.name}
@@ -282,7 +282,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
         </div>
 
         {/* 5. Bar chart by category (clickable filters) */}
-        <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4">
+        <div className="rounded-xl sm:rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-3 sm:p-4">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
             KPIs by Category (Bars)
           </h3>
@@ -302,8 +302,8 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
                   key={b.label}
                   type="button"
                   onClick={() => !disabled && navigate(`/kpis?search=${encodeURIComponent(b.search)}`)}
-                  className={`flex flex-col items-center justify-end h-full group focus:outline-none ${
-                    disabled ? 'opacity-40 cursor-default' : 'cursor-pointer'
+                  className={`flex flex-col items-center justify-end h-full min-h-[44px] group focus:outline-none touch-manipulation ${
+                    disabled ? 'opacity-40 cursor-default' : 'cursor-pointer active:opacity-90'
                   }`}
                   title={
                     disabled
@@ -328,7 +328,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
         </div>
 
         {/* 6. Radar chart for selected KPIs (clickable legend) */}
-        <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4">
+        <div className="rounded-xl sm:rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-3 sm:p-4">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
             Radar: Relative Performance
           </h3>
@@ -402,7 +402,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
                   key={k.kpiId}
                   type="button"
                   onClick={() => navigate(`/kpis/${k.kpiId}`)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-sky-200/70 dark:border-sky-700/70 px-2.5 py-0.5 text-[11px] text-sky-800 dark:text-sky-100 bg-sky-50/80 dark:bg-sky-900/40 hover:bg-sky-100 dark:hover:bg-sky-800/80 transition"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-sky-200/70 dark:border-sky-700/70 px-2.5 py-1.5 min-h-[36px] text-[11px] text-sky-800 dark:text-sky-100 bg-sky-50/80 dark:bg-sky-900/40 hover:bg-sky-100 dark:hover:bg-sky-800/80 transition touch-manipulation"
                   title={`View details for ${k.name}`}
                 >
                   <span className="w-2 h-2 rounded-full bg-sky-500" />
@@ -414,7 +414,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
         </div>
 
         {/* 7. Word cloud style emphasis */}
-        <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4">
+        <div className="rounded-xl sm:rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-3 sm:p-4">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
             KPI Emphasis (Word Cloud)
           </h3>
@@ -432,7 +432,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
                     key={k.kpiId}
                     type="button"
                     onClick={() => navigate(`/kpis/${k.kpiId}`)}
-                    className={`rounded-full px-2.5 py-1 bg-sky-100/60 dark:bg-sky-900/50 text-sky-900 dark:text-sky-100 ${weight} hover:bg-sky-200/70 dark:hover:bg-sky-800/70 transition`}
+                    className={`rounded-full px-2.5 py-1.5 min-h-[36px] inline-flex items-center bg-sky-100/60 dark:bg-sky-900/50 text-sky-900 dark:text-sky-100 ${weight} hover:bg-sky-200/70 dark:hover:bg-sky-800/70 transition touch-manipulation`}
                     style={{ fontSize: `${size}rem` }}
                     title={`${k.name} – ${formatValue(k.currentValue, k.unit)}`}
                   >
@@ -445,7 +445,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
         </div>
 
         {/* 8. Top underperforming KPIs (clickable list) */}
-        <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4">
+        <div className="rounded-xl sm:rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-3 sm:p-4">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
             Underperforming KPIs (Gap to Target)
           </h3>
@@ -480,7 +480,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
                     key={k.kpiId}
                     type="button"
                     onClick={() => navigate(`/kpis/${k.kpiId}`)}
-                    className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition text-left"
+                    className="w-full flex items-center gap-2 rounded-lg px-2 py-2.5 min-h-[44px] hover:bg-slate-50 dark:hover:bg-slate-800/70 transition text-left touch-manipulation"
                     title={`View details for ${k.name}`}
                   >
                     <div className="min-w-0 flex-1">
@@ -531,7 +531,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
         </div>
 
         {/* 9. Momentum KPIs (Change % Leaders) */}
-        <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4">
+        <div className="rounded-xl sm:rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-3 sm:p-4">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
             Momentum KPIs (Top Change%)
           </h3>
@@ -555,7 +555,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
                     key={k.kpiId}
                     type="button"
                     onClick={() => navigate(`/kpis/${k.kpiId}`)}
-                    className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] ${bg} border-emerald-400/40 dark:border-emerald-500/40 hover:shadow-sm hover:-translate-y-[1px] transition`}
+                    className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 min-h-[36px] text-[11px] ${bg} border-emerald-400/40 dark:border-emerald-500/40 hover:shadow-sm hover:-translate-y-[1px] transition touch-manipulation`}
                     title={`Change: ${change.toFixed(1)}%`}
                   >
                     <span className="truncate max-w-[140px]">{k.name}</span>
@@ -585,7 +585,7 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
         </div>
 
         {/* 10. Compact mini KPI strip chart */}
-        <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4">
+        <div className="rounded-xl sm:rounded-2xl border border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-900/60 backdrop-blur p-3 sm:p-4">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
             Mini KPI Strip (Spark Bars)
           </h3>
@@ -603,10 +603,10 @@ export const DashboardVisualGallery: React.FC<DashboardVisualGalleryProps> = ({ 
                     : 'bg-rose-500';
               return (
                 <div key={k.kpiId} className="flex items-center gap-2">
-                  <button
+                    <button
                     type="button"
                     onClick={() => navigate(`/kpis/${k.kpiId}`)}
-                    className="flex items-center gap-2 flex-1 group"
+                    className="flex items-center gap-2 flex-1 group min-h-[44px] py-2 touch-manipulation text-left"
                   >
                     <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate w-36 text-left group-hover:text-gray-900 dark:group-hover:text-gray-100">
                       {k.name}
